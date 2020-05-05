@@ -25,6 +25,7 @@
 #include <efx.h>//20200505
 #include <efx-presets.h>//20200505
 #include <alhelpers.h>//20200505
+#include <sndfile.hh>//20200505
 #include <sndfile.h>//20200505
 
 
@@ -378,7 +379,7 @@ static ALuint LoadSound(const char* filename)
 	}
 
 	/* Decode the whole audio file to a buffer. */
-	membuf = malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
+	membuf = (short*)malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
 
 	num_frames = sf_readf_short(sndfile, membuf, sfinfo.frames);
 	if (num_frames < 1)

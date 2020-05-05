@@ -72,8 +72,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\openal-soft-1.20.1-bin\include\AL;C:\Program Files (x86)\libsndfile\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win32;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\openal-soft-1.20.1-bin\include\AL;C:\libsndfile\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win32;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -98,7 +98,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\libsndfile\lib\libsndfile-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\libsndfile\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
