@@ -61,6 +61,8 @@ static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
 static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
 static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
 
+static LPALGETAUXILIARYEFFECTSLOTFV flLRDelay; //20200506
+
 ////立体音響の生成///////
 class StereoGenerate {
 
@@ -302,6 +304,8 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
 		alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
 		alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+		alEffectf(effect, AL_ECHO_LRDELAY, reverb->flLRDelay);/////20200506
+
 	}
 	else
 	{
@@ -324,6 +328,8 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
 		alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
 		alEffecti(effect, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+		alEffectf(effect, AL_ECHO_LRDELAY, reverb->flLRDelay);/////20200506
+
 	}
 
 	/* Check if an error occured, and clean up if so. */
@@ -416,7 +422,9 @@ static ALuint LoadSound(const char* filename)
 
 int main(int argc, char** argv)
 {
-	EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
+	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
+	EFXEAXREVERBPROPERTIES reverb = { 1.0000f, 1.0000f, 0.3162f, 0.8913f, 1.0000f, 1.4900f, 0.8300f, 1.0000f, 0.0500f, 0.0070f, { 0.0000f, 0.0000f, 0.0000f }, 1.2589f, 0.0110f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 0.2500f, 0.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x1, 0.404f};
+
 	ALuint source, buffer, effect, slot;
 	ALenum state;
 
