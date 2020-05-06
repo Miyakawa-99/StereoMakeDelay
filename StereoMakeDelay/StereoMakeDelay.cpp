@@ -511,6 +511,7 @@ int main(int argc, char** argv)
 	do {
 		al_nssleep(10000000);
 		alGetSourcei(source, AL_SOURCE_STATE, &state);
+		if ('\r' == getch()) break;
 	} while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
 
 	/* All done. Delete resources, and close down OpenAL. */
