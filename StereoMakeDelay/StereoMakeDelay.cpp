@@ -315,7 +315,7 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		 * available reverb properties. */
 		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
 
-		alEffectf(effect, AL_REVERB_DENSITY, reverb->flDensity);
+		/*alEffectf(effect, AL_REVERB_DENSITY, reverb->flDensity);
 		alEffectf(effect, AL_REVERB_DIFFUSION, reverb->flDiffusion);
 		alEffectf(effect, AL_REVERB_GAIN, reverb->flGain);
 		alEffectf(effect, AL_REVERB_GAINHF, reverb->flGainHF);
@@ -327,7 +327,7 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		alEffectf(effect, AL_REVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
 		alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
 		alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-		alEffecti(effect, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+		alEffecti(effect, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
 		alEffectf(effect, AL_ECHO_LRDELAY, reverb->flLRDelay);/////20200506
 
 	}
@@ -423,7 +423,7 @@ static ALuint LoadSound(const char* filename)
 int main(int argc, char** argv)
 {
 	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	EFXEAXREVERBPROPERTIES reverb = { 1.0000f, 1.0000f, 0.3162f, 0.8913f, 1.0000f, 1.4900f, 0.8300f, 1.0000f, 0.0500f, 0.0070f, { 0.0000f, 0.0000f, 0.0000f }, 1.2589f, 0.0110f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 0.2500f, 0.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x1, 0.404f};
+	EFXEAXREVERBPROPERTIES reverb = {0.1f};
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
