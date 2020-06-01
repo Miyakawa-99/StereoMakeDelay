@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <al.h>
 #include <alc.h>
+//#include <alext.h>
 #include <math.h>
 #include <conio.h>
 #include <efx.h>//20200505
@@ -270,7 +271,6 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 {
 	ALuint effect = 0;
 	ALenum err;
-
 	/* Create the effect object and check if we can do EAX reverb. */
 	alGenEffects(1, &effect);
 	if (alGetEnumValue("AL_EFFECT_EAXREVERB") != 0)
@@ -304,39 +304,40 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
 		alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
 		alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
-		alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flLRDelay);/////20200506
+		//alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flLRDelay);/////20200506
 
 	}
 	else
 	{
 		printf("Using Standard Reverb\n");
-
 		/* No EAX Reverb. Set the standard reverb effect type then load the
 		 * available reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
+		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS); //ここまではいってる可能性が高い
 
-		/*alEffectf(effect, AL_REVERB_DENSITY, reverb->flDensity);
-		alEffectf(effect, AL_REVERB_DIFFUSION, reverb->flDiffusion);
-		alEffectf(effect, AL_REVERB_GAIN, reverb->flGain);
-		alEffectf(effect, AL_REVERB_GAINHF, reverb->flGainHF);
-		alEffectf(effect, AL_REVERB_DECAY_TIME, reverb->flDecayTime);
-		alEffectf(effect, AL_REVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
-		alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
+		alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
+		alEffecti(effect, AL_CHORUS_PHASE, reverb->flDiffusion);
+		alEffectf(effect, AL_CHORUS_RATE, reverb->flGain);
+		alEffectf(effect, AL_CHORUS_DEPTH, reverb->flGainHF);
+		alEffectf(effect, AL_CHORUS_FEEDBACK, reverb->flDecayTime);
+		alEffectf(effect, AL_CHORUS_DELAY, reverb->flDecayHFRatio);
+
+		/*alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
 		alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
 		alEffectf(effect, AL_REVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
 		alEffectf(effect, AL_REVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
 		alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
 		alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
 		alEffecti(effect, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
-		alEffecti(effect, AL_CHORUS_PHASE, reverb->flLRDelay);/////20200506
-
+		//alEffecti(effect, AL_CHORUS_PHASE, reverb->flLRDelay);/////20200506
 	}
-
+	
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
 	if (err != AL_NO_ERROR)
 	{
 		fprintf(stderr, "OpenAL LoadEffectError: %s\n", alGetString(err));
+		//auto loglevel = getenv("ALSOFT_LOGLEVEL");
+		//LOG(("OpenAL Logging Level: %1").arg(loglevel ? loglevel : "(not set)"));
 		if (alIsEffect(effect))
 			alDeleteEffects(1, &effect);
 		return 0;
@@ -423,7 +424,7 @@ static ALuint LoadSound(const char* filename)
 int main(int argc, char** argv)
 {
 	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	EFXEAXREVERBPROPERTIES reverb = {50};
+	EFXEAXREVERBPROPERTIES reverb =  DEFAULT;
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
