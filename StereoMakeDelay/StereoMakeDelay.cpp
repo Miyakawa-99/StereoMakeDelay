@@ -295,10 +295,17 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 	if (alGetEnumValue("AL_EFFECT_CHORUS") == NULL)
 	{
 		printf("Using EAX Reverb\n");
-
 		/* EAX Reverb is available. Set the EAX effect type then load the
 		 reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
+		fprintf(stderr, "vender: %s\n", alGetString(AL_VENDOR));
+		fprintf(stderr, "OpenAL VERSION: %s\n", alGetString(AL_VERSION));
+		
+		fprintf(stderr, "EXTENSION VERSION: %s\n", alGetString(AL_EXTENSIONS));
+		
+		fprintf(stderr, "RENDERER: %s\n", alGetString(AL_RENDERER));
+
+
+		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
 		/*alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
 		alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
@@ -331,7 +338,7 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 		printf("Using Standard Reverb\n");
 		/* No EAX Reverb. Set the standard reverb effect type then load the
 		 * available reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
+		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
 		/*alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
 		alEffecti(effect, AL_CHORUS_PHASE, reverb->flDiffusion);
@@ -355,8 +362,7 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 	if (err != AL_NO_ERROR)
 	{
 		fprintf(stderr, "OpenAL LoadEffectError: %s\n", alGetString(err));
-		//auto loglevel = getenv("ALSOFT_LOGLEVEL");
-		//LOG(("OpenAL Logging Level: %1").arg(loglevel ? loglevel : "(not set)"));
+
 		if (alIsEffect(effect))
 			alDeleteEffects(1, &effect);
 		return 0;

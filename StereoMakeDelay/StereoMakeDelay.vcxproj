@@ -77,8 +77,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\openal-soft-master\include\AL;C:\openal-soft-master\examples\common;C:\libsndfile\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\openal-soft-master\build\Debug;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\openal-soft-1.20.1-bin\include\AL;C:\libsndfile\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win64;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -118,7 +118,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libsndfile-1.lib;common.lib;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.18362.0\um\x64\WinMM.Lib;OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libsndfile-1.lib;OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
