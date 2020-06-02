@@ -72,13 +72,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\openal-soft-1.20.1-bin\include\AL;C:\libsndfile\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win32;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\openal-soft-master\al;C:\libsndfile\include;C:\openal-soft-master\include\AL;C:\openal-soft-master\examples\common;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\openal-soft-master\build\Debug;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\openal-soft-1.20.1-bin\include\AL;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win32;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\openal-soft-master\include\AL;C:\openal-soft-master\examples\common;C:\libsndfile\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\openal-soft-master\build\Debug;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -94,12 +94,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um;C:\openal-soft-master\include;C:\openal-soft-master\build;C:\openal-soft-master;C:\openal-soft-master\alc;C:\openal-soft-master\common</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>C:\libsndfile\lib\libsndfile-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Program Files (x86)\libsndfile\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>C:\libsndfile\lib\libsndfile-1.lib;common.lib;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.18362.0\um\x64\WinMM.Lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\libsndfile\lib;C:\openal-soft-master\build\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -110,10 +111,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libsndfile-1.lib;common.lib;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.18362.0\um\x64\WinMM.Lib;OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

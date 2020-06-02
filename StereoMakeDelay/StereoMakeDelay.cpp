@@ -10,6 +10,19 @@
 #define NUM_BUFFER 2
 #define NUM_SOURCE 2
 
+#ifndef CHORUSPROPERTIES_DEFINED
+#define CHORUSPROPERTIES_DEFINED
+typedef struct {
+	int flDensity;
+	int flDiffusion;
+	float flGain;
+	float flGainHF;
+	float flGainLF;
+	float flDecayTime;
+	float flDecayHFRatio;
+	float flDecayLFRatio;
+} CHORUSPROPERTIES, * LPCHORUSPROPERTIES;
+#endif
 ///////////StereoGenerate
 #include <assert.h>
 #include <inttypes.h>
@@ -24,14 +37,14 @@
 #include <math.h>
 #include <conio.h>
 #include <efx.h>//20200505
-#include <efx-presets.h>//20200505
+//#include <efx-presets.h>//20200505
 #include <alhelpers.h>//20200505
 #include <sndfile.hh>//20200505
 #include <sndfile.h>//20200505
 
 
 
-#pragma comment(lib, "OpenAL32.lib")
+//#pragma comment(lib, "OpenAL32.lib")
 //fopenの警告を無視
 #pragma warning(disable:4996)
 
@@ -267,18 +280,24 @@ public:
 
 /* LoadEffect loads the given reverb properties into a new OpenAL effect
  * object, and returns the new effect ID. */
-static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
+static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 {
 	ALuint effect = 0;
 	ALenum err;
 	/* Create the effect object and check if we can do EAX reverb. */
 	alGenEffects(1, &effect);
-	if (alGetEnumValue("AL_EFFECT_EAXREVERB") != 0)
+	/* alGenEffects function is used to create one or more Effect objects.An Effect object stores
+		an effect type and a set of parameter values to control that Effect.In order to use an Effect it
+		must be attached to an Auxiliary Effect Slot object.*/
+	//Returns the actual ALenum described by a string.Returns NULL if the string doesn’t
+		//describe a valid OpenAL enum.
+
+	if (alGetEnumValue("AL_EFFECT_CHORUS") == NULL)
 	{
 		printf("Using EAX Reverb\n");
 
 		/* EAX Reverb is available. Set the EAX effect type then load the
-		 * reverb properties. */
+		 reverb properties. */
 		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
 		/*alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
@@ -312,14 +331,14 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		printf("Using Standard Reverb\n");
 		/* No EAX Reverb. Set the standard reverb effect type then load the
 		 * available reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS); //ここまではいってる可能性が高い
+		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
-		alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
+		/*alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
 		alEffecti(effect, AL_CHORUS_PHASE, reverb->flDiffusion);
 		alEffectf(effect, AL_CHORUS_RATE, reverb->flGain);
 		alEffectf(effect, AL_CHORUS_DEPTH, reverb->flGainHF);
 		alEffectf(effect, AL_CHORUS_FEEDBACK, reverb->flDecayTime);
-		alEffectf(effect, AL_CHORUS_DELAY, reverb->flDecayHFRatio);
+		alEffectf(effect, AL_CHORUS_DELAY, reverb->flDecayHFRatio);*/
 
 		/*alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
 		alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
@@ -424,7 +443,8 @@ static ALuint LoadSound(const char* filename)
 int main(int argc, char** argv)
 {
 	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	EFXEAXREVERBPROPERTIES reverb =  DEFAULT;
+	CHORUSPROPERTIES reverb = { 1, 90, 0.3162f, 0.8913f, 1.0000f}
+	;
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
