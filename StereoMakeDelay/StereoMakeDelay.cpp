@@ -43,7 +43,6 @@ typedef struct {
 #include <sndfile.h>//20200505
 
 
-
 //#pragma comment(lib, "OpenAL32.lib")
 //fopenの警告を無視
 #pragma warning(disable:4996)
@@ -292,11 +291,12 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 	//Returns the actual ALenum described by a string.Returns NULL if the string doesn’t
 		//describe a valid OpenAL enum.
 
-	if (alGetEnumValue("AL_EFFECT_CHORUS") == NULL)
+	if (alGetEnumValue("AL_EFFECT_REVERB") != NULL)
 	{
 		printf("Using EAX Reverb\n");
 		/* EAX Reverb is available. Set the EAX effect type then load the
 		 reverb properties. */
+
 		fprintf(stderr, "vender: %s\n", alGetString(AL_VENDOR));
 		fprintf(stderr, "OpenAL VERSION: %s\n", alGetString(AL_VERSION));
 		
@@ -454,6 +454,45 @@ int main(int argc, char** argv)
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
+
+	///////////////////
+	// create a default device
+	//const ALCchar* deviceList = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
+	fprintf(stderr, "[OpenAL] ALL: %s\n", alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER));
+
+
+	ALCdevice* device = alcOpenDevice(NULL);
+	if (!device)
+	{
+		printf("Could not create OpenAL device.\n");
+		return false;
+	}
+
+	// context attributes, 2 zeros to terminate 
+	ALint attribs[6] = {
+		0, 0
+	};
+
+	ALCcontext* context = alcCreateContext(device, attribs);
+	if (!context)
+	{
+		printf("Could not create OpenAL context.\n");
+		alcCloseDevice(device);
+		return false;
+	}
+
+	if (!alcMakeContextCurrent(context))
+	{
+		printf("Could not enable OpenAL context.\n");
+		alcDestroyContext(context);
+		alcCloseDevice(device);
+		return false;
+	}
+
+	fprintf(stderr, "[OpenAL] Version: %s\n", alGetString(AL_VERSION));
+	fprintf(stderr, "[OpenAL] Vendor: %s\n", alGetString(AL_VENDOR));
+	fprintf(stderr, "[OpenAL] Renderer: %s\n", alGetString(AL_RENDERER));
+	///////////////////////////
 
 	/* Print out usage if no arguments were specified */
 	if (argc < 2)

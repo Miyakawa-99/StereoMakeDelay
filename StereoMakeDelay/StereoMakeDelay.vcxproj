@@ -78,7 +78,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\openal-soft-1.20.1-bin\include\AL;C:\libsndfile\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win64;C:\libsndfile\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\openal-soft-1.20.1-bin\libs\Win64;C:\libsndfile\lib;C:\openal-soft-1.20.1-bin\bin\Win64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
