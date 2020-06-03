@@ -33,7 +33,7 @@ typedef struct {
 #include <stdio.h>
 #include <al.h>
 #include <alc.h>
-//#include <alext.h>
+#include <alext.h>
 #include <math.h>
 #include <conio.h>
 #include <efx.h>//20200505
@@ -41,6 +41,25 @@ typedef struct {
 #include <alhelpers.h>//20200505
 #include <sndfile.hh>//20200505
 #include <sndfile.h>//20200505
+
+//////20200603
+#include <stdarg.h>
+#include <string.h>
+
+#ifndef ALC_ENUMERATE_ALL_EXT
+#define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012
+#define ALC_ALL_DEVICES_SPECIFIER                0x1013
+#endif
+
+#ifndef ALC_EXT_EFX
+#define ALC_EFX_MAJOR_VERSION                    0x20001
+#define ALC_EFX_MINOR_VERSION                    0x20002
+#define ALC_MAX_AUXILIARY_SENDS                  0x20003
+#endif
+
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 
 
 //#pragma comment(lib, "OpenAL32.lib")
@@ -297,15 +316,7 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 		/* EAX Reverb is available. Set the EAX effect type then load the
 		 reverb properties. */
 
-		fprintf(stderr, "vender: %s\n", alGetString(AL_VENDOR));
-		fprintf(stderr, "OpenAL VERSION: %s\n", alGetString(AL_VERSION));
-		
-		fprintf(stderr, "EXTENSION VERSION: %s\n", alGetString(AL_EXTENSIONS));
-		
-		fprintf(stderr, "RENDERER: %s\n", alGetString(AL_RENDERER));
-
-
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
+		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
 		/*alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
 		alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
@@ -338,7 +349,7 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 		printf("Using Standard Reverb\n");
 		/* No EAX Reverb. Set the standard reverb effect type then load the
 		 * available reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
+		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
 		/*alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
 		alEffecti(effect, AL_CHORUS_PHASE, reverb->flDiffusion);
@@ -446,11 +457,343 @@ static ALuint LoadSound(const char* filename)
 	return buffer;
 }
 
-int main(int argc, char** argv)
+
+
+static WCHAR* FromUTF8(const char* str)
+{
+	WCHAR* out = NULL;
+	int len;
+
+	if ((len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
+	{
+		//membuf = (short*)malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
+
+		out = (WCHAR*)calloc(sizeof(WCHAR), (unsigned int)(len));
+		MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
+	}
+	return out;
+}
+
+/* Override printf, fprintf, and fwrite so we can print UTF-8 strings. */
+static void al_fprintf(FILE* file, const char* fmt, ...)
+{
+	char str[1024];
+	WCHAR* wstr;
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(str, sizeof(str), fmt, ap);
+	va_end(ap);
+
+	str[sizeof(str) - 1] = 0;
+	wstr = FromUTF8(str);
+	if (!wstr)
+		fprintf(file, "<UTF-8 error> %s", str);
+	else
+		fprintf(file, "%ls", wstr);
+	free(wstr);
+}
+#define fprintf al_fprintf
+#define printf(...) al_fprintf(stdout, __VA_ARGS__)
+
+static size_t al_fwrite(const void* ptr, size_t size, size_t nmemb, FILE* file)
+{
+	char str[1024];
+	WCHAR* wstr;
+	size_t len;
+
+	len = size * nmemb;
+	if (len > sizeof(str) - 1)
+		len = sizeof(str) - 1;
+	memcpy(str, ptr, len);
+	str[len] = 0;
+
+	wstr = FromUTF8(str);
+	if (!wstr)
+		fprintf(file, "<UTF-8 error> %s", str);
+	else
+		fprintf(file, "%ls", wstr);
+	free(wstr);
+
+	return len / size;
+}
+#define fwrite al_fwrite
+#endif
+
+
+#define MAX_WIDTH  80
+
+static void printList(const char* list, char separator)
+{
+	size_t col = MAX_WIDTH, len;
+	const char* indent = "    ";
+	const char* next;
+
+	if (!list || *list == '\0')
+	{
+		fprintf(stdout, "\n%s!!! none !!!\n", indent);
+		return;
+	}
+
+	do {
+		next = strchr(list, separator);
+		if (next)
+		{
+			len = (size_t)(next - list);
+			do {
+				next++;
+			} while (*next == separator);
+		}
+		else
+			len = strlen(list);
+
+		if (len + col + 2 >= MAX_WIDTH)
+		{
+			fprintf(stdout, "\n%s", indent);
+			col = strlen(indent);
+		}
+		else
+		{
+			fputc(' ', stdout);
+			col++;
+		}
+
+		len = fwrite(list, 1, len, stdout);
+		col += len;
+
+		if (!next || *next == '\0')
+			break;
+		fputc(',', stdout);
+		col++;
+
+		list = next;
+	} while (1);
+	fputc('\n', stdout);
+}
+
+static void printDeviceList(const char* list)
+{
+	if (!list || *list == '\0')
+		printf("    !!! none !!!\n");
+	else do {
+		printf("    %s\n", list);
+		list += strlen(list) + 1;
+	} while (*list != '\0');
+}
+
+
+static ALenum checkALErrors(int linenum)
+{
+	ALenum err = alGetError();
+	if (err != AL_NO_ERROR)
+		printf("OpenAL Error: %s (0x%x), @ %d\n", alGetString(err), err, linenum);
+	return err;
+}
+#define checkALErrors() checkALErrors(__LINE__)
+
+static ALCenum checkALCErrors(ALCdevice* device, int linenum)
+{
+	ALCenum err = alcGetError(device);
+	if (err != ALC_NO_ERROR)
+		printf("ALC Error: %s (0x%x), @ %d\n", alcGetString(device, err), err, linenum);
+	return err;
+}
+#define checkALCErrors(x) checkALCErrors((x),__LINE__)
+
+
+static void printALCInfo(ALCdevice* device)
+{
+	ALCint major, minor;
+
+	if (device)
+	{
+		const ALCchar* devname = NULL;
+		printf("\n");
+		if (alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
+			devname = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+		if (checkALCErrors(device) != ALC_NO_ERROR || !devname)
+			devname = alcGetString(device, ALC_DEVICE_SPECIFIER);
+		printf("** Info for device \"%s\" **\n", devname);
+	}
+	alcGetIntegerv(device, ALC_MAJOR_VERSION, 1, &major);
+	alcGetIntegerv(device, ALC_MINOR_VERSION, 1, &minor);
+	if (checkALCErrors(device) == ALC_NO_ERROR)
+		printf("ALC version: %d.%d\n", major, minor);
+	if (device)
+	{
+		printf("ALC extensions:");
+		printList(alcGetString(device, ALC_EXTENSIONS), ' ');
+		checkALCErrors(device);
+	}
+}
+
+static void printHRTFInfo(ALCdevice* device)
+{
+	LPALCGETSTRINGISOFT alcGetStringiSOFT;
+	ALCint num_hrtfs;
+
+	if (alcIsExtensionPresent(device, "ALC_SOFT_HRTF") == ALC_FALSE)
+	{
+		printf("HRTF extension not available\n");
+		return;
+	}
+
+	alcGetStringiSOFT = (LPALCGETSTRINGISOFT)alcGetProcAddress(device, "alcGetStringiSOFT");
+
+	alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtfs);
+	if (!num_hrtfs)
+		printf("No HRTFs found\n");
+	else
+	{
+		ALCint i;
+		printf("Available HRTFs:\n");
+		for (i = 0; i < num_hrtfs; ++i)
+		{
+			const ALCchar* name = alcGetStringiSOFT(device, ALC_HRTF_SPECIFIER_SOFT, i);
+			printf("    %s\n", name);
+		}
+	}
+	checkALCErrors(device);
+}
+
+static void printALInfo(void)
+{
+	printf("OpenAL vendor string: %s\n", alGetString(AL_VENDOR));
+	printf("OpenAL renderer string: %s\n", alGetString(AL_RENDERER));
+	printf("OpenAL version string: %s\n", alGetString(AL_VERSION));
+	printf("OpenAL extensions:");
+	printList(alGetString(AL_EXTENSIONS), ' ');
+	checkALErrors();
+}
+
+static void printResamplerInfo(void)
+{
+	LPALGETSTRINGISOFT alGetStringiSOFT;
+	ALint num_resamplers;
+	ALint def_resampler;
+
+	if (!alIsExtensionPresent("AL_SOFT_source_resampler"))
+	{
+		printf("Resampler info not available\n");
+		return;
+	}
+
+	alGetStringiSOFT = (LPALGETSTRINGISOFT)alGetProcAddress("alGetStringiSOFT");
+
+	num_resamplers = alGetInteger(AL_NUM_RESAMPLERS_SOFT);
+	def_resampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
+
+	if (!num_resamplers)
+		printf("!!! No resamplers found !!!\n");
+	else
+	{
+		ALint i;
+		printf("Available resamplers:\n");
+		for (i = 0; i < num_resamplers; ++i)
+		{
+			const ALchar* name = alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, i);
+			printf("    %s%s\n", name, (i == def_resampler) ? " *" : "");
+		}
+	}
+	checkALErrors();
+}
+
+static void printEFXInfo(ALCdevice* device)
+{
+	ALCint major, minor, sends;
+	static const ALchar filters[][32] = {
+		"AL_FILTER_LOWPASS", "AL_FILTER_HIGHPASS", "AL_FILTER_BANDPASS", ""
+	};
+	char filterNames[] = "Low-pass,High-pass,Band-pass,";
+	static const ALchar effects[][32] = {
+		"AL_EFFECT_EAXREVERB", "AL_EFFECT_REVERB", "AL_EFFECT_CHORUS",
+		"AL_EFFECT_DISTORTION", "AL_EFFECT_ECHO", "AL_EFFECT_FLANGER",
+		"AL_EFFECT_FREQUENCY_SHIFTER", "AL_EFFECT_VOCAL_MORPHER",
+		"AL_EFFECT_PITCH_SHIFTER", "AL_EFFECT_RING_MODULATOR",
+		"AL_EFFECT_AUTOWAH", "AL_EFFECT_COMPRESSOR", "AL_EFFECT_EQUALIZER", ""
+	};
+	static const ALchar dedeffects[][64] = {
+		"AL_EFFECT_DEDICATED_DIALOGUE",
+		"AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", ""
+	};
+	char effectNames[] = "EAX Reverb,Reverb,Chorus,Distortion,Echo,Flanger,"
+		"Frequency Shifter,Vocal Morpher,Pitch Shifter,"
+		"Ring Modulator,Autowah,Compressor,Equalizer,"
+		"Dedicated Dialog,Dedicated LFE,";
+	char* current;
+	int i;
+
+	if (alcIsExtensionPresent(device, "ALC_EXT_EFX") == AL_FALSE)
+	{
+		printf("EFX not available\n");
+		return;
+	}
+
+	alcGetIntegerv(device, ALC_EFX_MAJOR_VERSION, 1, &major);
+	alcGetIntegerv(device, ALC_EFX_MINOR_VERSION, 1, &minor);
+	if (checkALCErrors(device) == ALC_NO_ERROR)
+		printf("EFX version: %d.%d\n", major, minor);
+	alcGetIntegerv(device, ALC_MAX_AUXILIARY_SENDS, 1, &sends);
+	if (checkALCErrors(device) == ALC_NO_ERROR)
+		printf("Max auxiliary sends: %d\n", sends);
+
+	current = filterNames;
+	for (i = 0; filters[i][0]; i++)
+	{
+		char* next = strchr(current, ',');
+		ALenum val;
+
+		val = alGetEnumValue(filters[i]);
+		if (alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+			memmove(current, next + 1, strlen(next));
+		else
+			current = next + 1;
+	}
+	printf("Supported filters:");
+	printList(filterNames, ',');
+
+	current = effectNames;
+	for (i = 0; effects[i][0]; i++)
+	{
+		char* next = strchr(current, ',');
+		ALenum val;
+
+		val = alGetEnumValue(effects[i]);
+		if (alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+			memmove(current, next + 1, strlen(next));
+		else
+			current = next + 1;
+	}
+	if (alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
+	{
+		for (i = 0; dedeffects[i][0]; i++)
+		{
+			char* next = strchr(current, ',');
+			ALenum val;
+
+			val = alGetEnumValue(dedeffects[i]);
+			if (alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+				memmove(current, next + 1, strlen(next));
+			else
+				current = next + 1;
+		}
+	}
+	else
+	{
+		for (i = 0; dedeffects[i][0]; i++)
+		{
+			char* next = strchr(current, ',');
+			memmove(current, next + 1, strlen(next));
+		}
+	}
+	printf("Supported effects:");
+	printList(effectNames, ',');
+}
+
+int main(int argc, char* argv[])
 {
 	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	CHORUSPROPERTIES reverb = { 1, 90, 0.3162f, 0.8913f, 1.0000f}
-	;
+	CHORUSPROPERTIES reverb = { 1, 90, 0.3162f, 0.8913f, 1.0000f };
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
@@ -458,10 +801,9 @@ int main(int argc, char** argv)
 	///////////////////
 	// create a default device
 	//const ALCchar* deviceList = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-	fprintf(stderr, "[OpenAL] ALL: %s\n", alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER));
 
 
-	ALCdevice* device = alcOpenDevice(NULL);
+	/*ALCdevice* device = alcOpenDevice(NULL);
 	if (!device)
 	{
 		printf("Could not create OpenAL device.\n");
@@ -487,21 +829,15 @@ int main(int argc, char** argv)
 		alcDestroyContext(context);
 		alcCloseDevice(device);
 		return false;
-	}
+	}*/
 
-	fprintf(stderr, "[OpenAL] Version: %s\n", alGetString(AL_VERSION));
-	fprintf(stderr, "[OpenAL] Vendor: %s\n", alGetString(AL_VENDOR));
-	fprintf(stderr, "[OpenAL] Renderer: %s\n", alGetString(AL_RENDERER));
-	///////////////////////////
 
-	/* Print out usage if no arguments were specified */
-	if (argc < 2)
+	/*if (argc < 2)
 	{
 		fprintf(stderr, "Usage: %s [-device <name] <filename>\n", argv[0]);
 		return 1;
 	}
 
-	/* Initialize OpenAL, and check for EFX support. */
 	argv++; argc--;
 	if (InitAL(&argv, &argc) != 0)
 		return 1;
@@ -511,9 +847,9 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Error: EFX not supported\n");
 		CloseAL();
 		return 1;
-	}
+	}*/
 
-	/* Define a macro to help load the function pointers. */
+	/* Define a macro to help load the function pointers.
 #define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
 	LOAD_PROC(LPALGENEFFECTS, alGenEffects);
 	LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
@@ -540,7 +876,7 @@ int main(int argc, char** argv)
 	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 
-	/* Load the sound into a buffer. */
+	/* Load the sound into a buffer.
 	buffer = LoadSound(argv[0]);
 	if (!buffer)
 	{
@@ -549,7 +885,7 @@ int main(int argc, char** argv)
 	}
 
 	/* Load the reverb into an effect. */
-	effect = LoadEffect(&reverb);
+	/*effect = LoadEffect(&reverb);
 	if (!effect)
 	{
 		alDeleteBuffers(1, &buffer);
@@ -559,78 +895,105 @@ int main(int argc, char** argv)
 
 	/* Create the effect slot object. This is what "plays" an effect on sources
 	 * that connect to it. */
-	slot = 0;
-	alGenAuxiliaryEffectSlots(1, &slot);
+	 /*slot = 0;
+	 alGenAuxiliaryEffectSlots(1, &slot);
 
-	/* Tell the effect slot to use the loaded effect object. Note that the this
-	 * effectively copies the effect properties. You can modify or delete the
-	 * effect object afterward without affecting the effect slot.
-	 */
-	alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
-	assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
+	 /* Tell the effect slot to use the loaded effect object. Note that the this
+	  * effectively copies the effect properties. You can modify or delete the
+	  * effect object afterward without affecting the effect slot.
+	  */
+	  /*alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+	  assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
 
-	/* Create the source to play the sound with. */
-	source = 0;
-	alGenSources(1, &source);
-	alSourcei(source, AL_BUFFER, (ALint)buffer);
+	  /* Create the source to play the sound with. */
+	  /*source = 0;
+	  alGenSources(1, &source);
+	  alSourcei(source, AL_BUFFER, (ALint)buffer);
 
-	/* Connect the source to the effect slot. This tells the source to use the
-	 * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
-	 */
-	alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
-	assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
+	  /* Connect the source to the effect slot. This tells the source to use the
+	   * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
+	   */
+	   /*alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
-	/* Play the sound until it finishes. */
-	alSourcePlay(source);
-	do {
-		al_nssleep(10000000);
-		alGetSourcei(source, AL_SOURCE_STATE, &state);
-		if ('\r' == getch()) break;
-	} while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
+	   /* Play the sound until it finishes. */
+	   /*alSourcePlay(source);
+	   do {
+		   al_nssleep(10000000);
+		   alGetSourcei(source, AL_SOURCE_STATE, &state);
+		   if ('\r' == getch()) break;
+	   } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
 
-	/* All done. Delete resources, and close down OpenAL. */
-	alDeleteSources(1, &source);
-	alDeleteAuxiliaryEffectSlots(1, &slot);
-	alDeleteEffects(1, &effect);
-	alDeleteBuffers(1, &buffer);
+	   /* All done. Delete resources, and close down OpenAL. */
+	   /*alDeleteSources(1, &source);
+	   alDeleteAuxiliaryEffectSlots(1, &slot);
+	   alDeleteEffects(1, &effect);
+	   alDeleteBuffers(1, &buffer);
 
-	CloseAL();
+	   CloseAL();
+
+	   return 0;*/
+
+
+	ALCdevice* device;
+	ALCcontext* context;
+	const ALCchar* devicename = 0;
+
+
+	if (argc > 1 && (strcmp(argv[1], "--help") == 0 ||
+		strcmp(argv[1], "-h") == 0))
+	{
+		printf("Usage: %s [playback device]\n", argv[0]);
+		return 0;
+	}
+
+	printf("Available playback devices:\n");
+	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
+		printDeviceList(alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER));
+	else
+		printDeviceList(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
+	printf("Available capture devices:\n");
+	printDeviceList(alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER));
+
+	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT") != AL_FALSE)
+		printf("Default playback device: %s\n",
+			alcGetString(NULL, ALC_DEFAULT_ALL_DEVICES_SPECIFIER));
+	else
+		printf("Default playback device: %s\n",
+			alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER));
+	printf("Default capture device: %s\n",
+		alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER));
+
+	printALCInfo(NULL);
+
+
+	device = alcOpenDevice(devicename);
+	//device = alcOpenDevice("Generic Software on");
+	if (!device)
+	{
+		printf("\n!!! Failed to open %s !!!\n\n", ((argc > 1) ? argv[1] : "default device"));
+		return 1;
+	}
+	printALCInfo(device);
+	printHRTFInfo(device);
+
+	context = alcCreateContext(device, NULL);
+	if (!context || alcMakeContextCurrent(context) == ALC_FALSE)
+	{
+		if (context)
+			alcDestroyContext(context);
+		alcCloseDevice(device);
+		printf("\n!!! Failed to set a context !!!\n\n");
+		return 1;
+	}
+
+	printALInfo();
+	printResamplerInfo();
+	printEFXInfo(device);
+
+	alcMakeContextCurrent(NULL);
+	alcDestroyContext(context);
+	alcCloseDevice(device);
 
 	return 0;
 }
-
-/*int main(int argc, char** argv)
-{
-	EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	// Initialize OpenAL, and check for EFX support. 
-	argv++; argc--;
-	if (InitAL(&argv, &argc) != 0)
-		return 1;
-
-	if (!alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
-	{
-		fprintf(stderr, "Error: EFX not supported\n");
-		CloseAL();
-		return 1;
-	}
-	while(1) {
-		//StereoGenerate Sound;
-		static bool IsFirst = true;
-		if (IsFirst && Sound.SoundSet("asano.wav") == 0) {
-			Sound.SoundPlay();
-			IsFirst = false;
-		}
-		if ('\r' == getch()) break;
-	}
-}*/
-
-// プログラムの実行: Ctrl + F5 または [デバッグ] > [デバッグなしで開始] メニュー
-// プログラムのデバッグ: F5 または [デバッグ] > [デバッグの開始] メニュー
-
-// 作業を開始するためのヒント: 
-//    1. ソリューション エクスプローラー ウィンドウを使用してファイルを追加/管理します 
-//   2. チーム エクスプローラー ウィンドウを使用してソース管理に接続します
-//   3. 出力ウィンドウを使用して、ビルド出力とその他のメッセージを表示します
-//   4. エラー一覧ウィンドウを使用してエラーを表示します
-//   5. [プロジェクト] > [新しい項目の追加] と移動して新しいコード ファイルを作成するか、[プロジェクト] > [既存の項目の追加] と移動して既存のコード ファイルをプロジェクトに追加します
-//   6. 後ほどこのプロジェクトを再び開く場合、[ファイル] > [開く] > [プロジェクト] と移動して .sln ファイルを選択します
