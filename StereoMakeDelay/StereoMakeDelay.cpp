@@ -10,7 +10,7 @@
 #define NUM_BUFFER 2
 #define NUM_SOURCE 2
 
-#ifndef CHORUSPROPERTIES_DEFINED
+/*#ifndef CHORUSPROPERTIES_DEFINED
 #define CHORUSPROPERTIES_DEFINED
 typedef struct {
 	int flDensity;
@@ -22,7 +22,7 @@ typedef struct {
 	float flDecayHFRatio;
 	float flDecayLFRatio;
 } CHORUSPROPERTIES, * LPCHORUSPROPERTIES;
-#endif
+#endif*/
 ///////////StereoGenerate
 #include <assert.h>
 #include <inttypes.h>
@@ -37,7 +37,7 @@ typedef struct {
 #include <math.h>
 #include <conio.h>
 #include <efx.h>//20200505
-//#include <efx-presets.h>//20200505
+#include <efx-presets.h>//20200505
 #include <alhelpers.h>//20200505
 #include <sndfile.hh>//20200505
 #include <sndfile.h>//20200505
@@ -298,7 +298,7 @@ public:
 
 /* LoadEffect loads the given reverb properties into a new OpenAL effect
  * object, and returns the new effect ID. */
-static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
+static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 {
 	ALuint effect = 0;
 	ALenum err;
@@ -351,12 +351,13 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 		 * available reverb properties. */
 		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
-		alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
-		alEffecti(effect, AL_CHORUS_PHASE, reverb->flDiffusion);
-		alEffectf(effect, AL_CHORUS_RATE, reverb->flGain);
-		alEffectf(effect, AL_CHORUS_DEPTH, reverb->flGainHF);
-		alEffectf(effect, AL_CHORUS_FEEDBACK, reverb->flDecayTime);
-		alEffectf(effect, AL_CHORUS_DELAY, reverb->flDecayHFRatio);
+		alEffecti(effect, AL_CHORUS_WAVEFORM, 1);
+		alEffecti(effect, AL_CHORUS_PHASE, 0);
+		alEffectf(effect, AL_CHORUS_RATE, 10.0f);
+		alEffectf(effect, AL_CHORUS_DEPTH, 0.1f);
+		alEffectf(effect, AL_CHORUS_FEEDBACK, 0.25f);
+		alEffectf(effect, AL_CHORUS_DELAY, 0.016f);
+		//EFXEAXREVERBPROPERTIES reverb = { 1,180, 1.1f, 0.1f, 0.25f, 0.016f };
 
 		/*alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
 		alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
@@ -793,7 +794,7 @@ static void printEFXInfo(ALCdevice* device)
 int main(int argc, char* argv[])
 {
 	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	CHORUSPROPERTIES reverb = { 1, 90, 0.3162f, 0.8913f, 1.0000f };
+	EFXEAXREVERBPROPERTIES reverb = { 1,180, 1.1f, 0.1f, 0.25f, 0.016f };
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
