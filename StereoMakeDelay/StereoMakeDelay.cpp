@@ -310,7 +310,7 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 	//Returns the actual ALenum described by a string.Returns NULL if the string doesn’t
 		//describe a valid OpenAL enum.
 
-	if (alGetEnumValue("AL_EFFECT_REVERB") != NULL)
+	if (alGetEnumValue("AL_EFFECT_REVERB") == NULL)
 	{
 		printf("Using EAX Reverb\n");
 		/* EAX Reverb is available. Set the EAX effect type then load the
@@ -351,12 +351,12 @@ static ALuint LoadEffect(const CHORUSPROPERTIES* reverb)
 		 * available reverb properties. */
 		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
-		/*alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
+		alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flDensity);
 		alEffecti(effect, AL_CHORUS_PHASE, reverb->flDiffusion);
 		alEffectf(effect, AL_CHORUS_RATE, reverb->flGain);
 		alEffectf(effect, AL_CHORUS_DEPTH, reverb->flGainHF);
 		alEffectf(effect, AL_CHORUS_FEEDBACK, reverb->flDecayTime);
-		alEffectf(effect, AL_CHORUS_DELAY, reverb->flDecayHFRatio);*/
+		alEffectf(effect, AL_CHORUS_DELAY, reverb->flDecayHFRatio);
 
 		/*alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
 		alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
@@ -797,149 +797,9 @@ int main(int argc, char* argv[])
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
-
-	///////////////////
-	// create a default device
-	//const ALCchar* deviceList = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-
-
-	/*ALCdevice* device = alcOpenDevice(NULL);
-	if (!device)
-	{
-		printf("Could not create OpenAL device.\n");
-		return false;
-	}
-
-	// context attributes, 2 zeros to terminate 
-	ALint attribs[6] = {
-		0, 0
-	};
-
-	ALCcontext* context = alcCreateContext(device, attribs);
-	if (!context)
-	{
-		printf("Could not create OpenAL context.\n");
-		alcCloseDevice(device);
-		return false;
-	}
-
-	if (!alcMakeContextCurrent(context))
-	{
-		printf("Could not enable OpenAL context.\n");
-		alcDestroyContext(context);
-		alcCloseDevice(device);
-		return false;
-	}*/
-
-
-	/*if (argc < 2)
-	{
-		fprintf(stderr, "Usage: %s [-device <name] <filename>\n", argv[0]);
-		return 1;
-	}
-
-	argv++; argc--;
-	if (InitAL(&argv, &argc) != 0)
-		return 1;
-
-	if (!alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
-	{
-		fprintf(stderr, "Error: EFX not supported\n");
-		CloseAL();
-		return 1;
-	}*/
-
-	/* Define a macro to help load the function pointers.
-#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
-	LOAD_PROC(LPALGENEFFECTS, alGenEffects);
-	LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
-	LOAD_PROC(LPALISEFFECT, alIsEffect);
-	LOAD_PROC(LPALEFFECTI, alEffecti);
-	LOAD_PROC(LPALEFFECTIV, alEffectiv);
-	LOAD_PROC(LPALEFFECTF, alEffectf);
-	LOAD_PROC(LPALEFFECTFV, alEffectfv);
-	LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
-	LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
-	LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
-	LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
-
-	LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
-	LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
-	LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
-	LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
-	LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
-	LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
-	LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
-	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
-	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
-	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
-	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
-#undef LOAD_PROC
-
-	/* Load the sound into a buffer.
-	buffer = LoadSound(argv[0]);
-	if (!buffer)
-	{
-		CloseAL();
-		return 1;
-	}
-
-	/* Load the reverb into an effect. */
-	/*effect = LoadEffect(&reverb);
-	if (!effect)
-	{
-		alDeleteBuffers(1, &buffer);
-		CloseAL();
-		return 1;
-	}
-
-	/* Create the effect slot object. This is what "plays" an effect on sources
-	 * that connect to it. */
-	 /*slot = 0;
-	 alGenAuxiliaryEffectSlots(1, &slot);
-
-	 /* Tell the effect slot to use the loaded effect object. Note that the this
-	  * effectively copies the effect properties. You can modify or delete the
-	  * effect object afterward without affecting the effect slot.
-	  */
-	  /*alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
-	  assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
-
-	  /* Create the source to play the sound with. */
-	  /*source = 0;
-	  alGenSources(1, &source);
-	  alSourcei(source, AL_BUFFER, (ALint)buffer);
-
-	  /* Connect the source to the effect slot. This tells the source to use the
-	   * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
-	   */
-	   /*alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
-	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
-
-	   /* Play the sound until it finishes. */
-	   /*alSourcePlay(source);
-	   do {
-		   al_nssleep(10000000);
-		   alGetSourcei(source, AL_SOURCE_STATE, &state);
-		   if ('\r' == getch()) break;
-	   } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
-
-	   /* All done. Delete resources, and close down OpenAL. */
-	   /*alDeleteSources(1, &source);
-	   alDeleteAuxiliaryEffectSlots(1, &slot);
-	   alDeleteEffects(1, &effect);
-	   alDeleteBuffers(1, &buffer);
-
-	   CloseAL();
-
-	   return 0;*/
-
-
 	ALCdevice* device;
 	ALCcontext* context;
-	const ALCchar* devicename = 0;
-
-
+	const ALCchar* devicename = "OpenAL Soft";
 	if (argc > 1 && (strcmp(argv[1], "--help") == 0 ||
 		strcmp(argv[1], "-h") == 0))
 	{
@@ -968,7 +828,6 @@ int main(int argc, char* argv[])
 
 
 	device = alcOpenDevice(devicename);
-	//device = alcOpenDevice("Generic Software on");
 	if (!device)
 	{
 		printf("\n!!! Failed to open %s !!!\n\n", ((argc > 1) ? argv[1] : "default device"));
@@ -977,7 +836,12 @@ int main(int argc, char* argv[])
 	printALCInfo(device);
 	printHRTFInfo(device);
 
-	context = alcCreateContext(device, NULL);
+	// context attributes, 2 zeros to terminate 
+	ALint attribs[6] = {
+		0, 0
+	};
+
+	context = alcCreateContext(device, attribs);
 	if (!context || alcMakeContextCurrent(context) == ALC_FALSE)
 	{
 		if (context)
@@ -991,9 +855,109 @@ int main(int argc, char* argv[])
 	printResamplerInfo();
 	printEFXInfo(device);
 
-	alcMakeContextCurrent(NULL);
-	alcDestroyContext(context);
-	alcCloseDevice(device);
+
+	if (argc < 2)
+	{
+		fprintf(stderr, "Usage: %s [-device <name] <filename>\n", argv[0]);
+		return 1;
+	}
+
+	argv++; argc--;
+	//if (InitAL(&argv, &argc) != 0)
+		//return 1;
+
+	if (!alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
+	{
+		fprintf(stderr, "Error: EFX not supported\n");
+		CloseAL();
+		return 1;
+	}
+
+//Define a macro to help load the function pointers.
+#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+	LOAD_PROC(LPALGENEFFECTS, alGenEffects);
+	LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
+	LOAD_PROC(LPALISEFFECT, alIsEffect);
+	LOAD_PROC(LPALEFFECTI, alEffecti);
+	LOAD_PROC(LPALEFFECTIV, alEffectiv);
+	LOAD_PROC(LPALEFFECTF, alEffectf);
+	LOAD_PROC(LPALEFFECTFV, alEffectfv);
+	LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
+	LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
+	LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
+	LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
+
+	LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
+	LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
+	LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
+	LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
+	LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
+	LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
+	LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
+	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
+	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
+	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
+	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
+#undef LOAD_PROC
+
+	// Load the sound into a buffer.
+	buffer = LoadSound(argv[0]);
+	if (!buffer)
+	{
+		CloseAL();
+		return 1;
+	}
+
+	/* Load the reverb into an effect. */
+	effect = LoadEffect(&reverb);
+	if (!effect)
+	{
+		alDeleteBuffers(1, &buffer);
+		CloseAL();
+		return 1;
+	}
+
+	/* Create the effect slot object. This is what "plays" an effect on sources
+	 * that connect to it. */
+	 slot = 0;
+	 alGenAuxiliaryEffectSlots(1, &slot);
+
+	 /* Tell the effect slot to use the loaded effect object. Note that the this
+	  * effectively copies the effect properties. You can modify or delete the
+	  * effect object afterward without affecting the effect slot.
+	  */
+	  alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+	  assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
+
+	  /* Create the source to play the sound with. */
+	  source = 0;
+	  alGenSources(1, &source);
+	  alSourcei(source, AL_BUFFER, (ALint)buffer);
+
+	  /* Connect the source to the effect slot. This tells the source to use the
+	   * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
+	   */
+	   alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
+
+	   /* Play the sound until it finishes. */
+	   alSourcePlay(source);
+	   do {
+		   al_nssleep(10000000);
+		   alGetSourcei(source, AL_SOURCE_STATE, &state);
+		   if ('\r' == getch()) break;
+	   } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
+
+	   /* All done. Delete resources, and close down OpenAL. */
+	   alDeleteSources(1, &source);
+	   alDeleteAuxiliaryEffectSlots(1, &slot);
+	   alDeleteEffects(1, &effect);
+	   alDeleteBuffers(1, &buffer);
+
+	   CloseAL();
+
 
 	return 0;
+
+
 }
