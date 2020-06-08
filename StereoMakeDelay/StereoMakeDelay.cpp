@@ -10,19 +10,6 @@
 #define NUM_BUFFER 2
 #define NUM_SOURCE 2
 
-/*#ifndef CHORUSPROPERTIES_DEFINED
-#define CHORUSPROPERTIES_DEFINED
-typedef struct {
-	int flDensity;
-	int flDiffusion;
-	float flGain;
-	float flGainHF;
-	float flGainLF;
-	float flDecayTime;
-	float flDecayHFRatio;
-	float flDecayLFRatio;
-} CHORUSPROPERTIES, * LPCHORUSPROPERTIES;
-#endif*/
 ///////////StereoGenerate
 #include <assert.h>
 #include <inttypes.h>
@@ -62,7 +49,6 @@ typedef struct {
 #define WIN32_LEAN_AND_MEAN
 
 
-//#pragma comment(lib, "OpenAL32.lib")
 //fopenの警告を無視
 #pragma warning(disable:4996)
 
@@ -302,73 +288,18 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 {
 	ALuint effect = 0;
 	ALenum err;
-	/* Create the effect object and check if we can do EAX reverb. */
 	alGenEffects(1, &effect);
-	/* alGenEffects function is used to create one or more Effect objects.An Effect object stores
-		an effect type and a set of parameter values to control that Effect.In order to use an Effect it
-		must be attached to an Auxiliary Effect Slot object.*/
-	//Returns the actual ALenum described by a string.Returns NULL if the string doesn’t
-		//describe a valid OpenAL enum.
 
-	if (alGetEnumValue("AL_EFFECT_REVERB") == NULL)
-	{
-		printf("Using EAX Reverb\n");
-		/* EAX Reverb is available. Set the EAX effect type then load the
-		 reverb properties. */
+	printf("Using Chorus\n");
+	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
+	alEffecti(effect, AL_CHORUS_WAVEFORM, 1);
+	alEffecti(effect, AL_CHORUS_PHASE, 0);
+	alEffectf(effect, AL_CHORUS_RATE, 10.0f);
+	alEffectf(effect, AL_CHORUS_DEPTH, 0.1f);
+	alEffectf(effect, AL_CHORUS_FEEDBACK, 0.25f);
+	alEffectf(effect, AL_CHORUS_DELAY, 0.016f);
 
-		/*alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
-		alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
-		alEffectf(effect, AL_EAXREVERB_GAIN, reverb->flGain);
-		alEffectf(effect, AL_EAXREVERB_GAINHF, reverb->flGainHF);
-		alEffectf(effect, AL_EAXREVERB_GAINLF, reverb->flGainLF);
-		alEffectf(effect, AL_EAXREVERB_DECAY_TIME, reverb->flDecayTime);
-		alEffectf(effect, AL_EAXREVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
-		alEffectf(effect, AL_EAXREVERB_DECAY_LFRATIO, reverb->flDecayLFRatio);
-		alEffectf(effect, AL_EAXREVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
-		alEffectf(effect, AL_EAXREVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
-		alEffectfv(effect, AL_EAXREVERB_REFLECTIONS_PAN, reverb->flReflectionsPan);
-		alEffectf(effect, AL_EAXREVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
-		alEffectf(effect, AL_EAXREVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
-		alEffectfv(effect, AL_EAXREVERB_LATE_REVERB_PAN, reverb->flLateReverbPan);
-		alEffectf(effect, AL_EAXREVERB_ECHO_TIME, reverb->flEchoTime);
-		alEffectf(effect, AL_EAXREVERB_ECHO_DEPTH, reverb->flEchoDepth);
-		alEffectf(effect, AL_EAXREVERB_MODULATION_TIME, reverb->flModulationTime);
-		alEffectf(effect, AL_EAXREVERB_MODULATION_DEPTH, reverb->flModulationDepth);
-		alEffectf(effect, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
-		alEffectf(effect, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
-		alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
-		alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-		alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
-		//alEffecti(effect, AL_CHORUS_WAVEFORM, reverb->flLRDelay);/////20200506
-
-	}
-	else
-	{
-		printf("Using Standard Reverb\n");
-		/* No EAX Reverb. Set the standard reverb effect type then load the
-		 * available reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
-
-		alEffecti(effect, AL_CHORUS_WAVEFORM, 1);
-		alEffecti(effect, AL_CHORUS_PHASE, 0);
-		alEffectf(effect, AL_CHORUS_RATE, 10.0f);
-		alEffectf(effect, AL_CHORUS_DEPTH, 0.1f);
-		alEffectf(effect, AL_CHORUS_FEEDBACK, 0.25f);
-		alEffectf(effect, AL_CHORUS_DELAY, 0.016f);
-		//EFXEAXREVERBPROPERTIES reverb = { 1,180, 1.1f, 0.1f, 0.25f, 0.016f };
-
-		/*alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
-		alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
-		alEffectf(effect, AL_REVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
-		alEffectf(effect, AL_REVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
-		alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
-		alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-		alEffecti(effect, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
-		//alEffecti(effect, AL_CHORUS_PHASE, reverb->flLRDelay);/////20200506
-	}
-	
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
 	if (err != AL_NO_ERROR)
@@ -379,7 +310,6 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 			alDeleteEffects(1, &effect);
 		return 0;
 	}
-
 	return effect;
 }
 
