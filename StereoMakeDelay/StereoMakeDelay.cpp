@@ -874,10 +874,6 @@ int main(int argc, char* argv[])
 	  alSourcei(source, AL_BUFFER, (ALint)buffer);
 
 
-	  /* Connect the source to the effect slot. This tells the source to use the
-	   * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
-	   */
-	  // alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
 
 	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
@@ -886,6 +882,9 @@ int main(int argc, char* argv[])
 
 	   for (int i = 0; i <= 360; i++) {
 		   alSource3f(source, AL_POSITION, cos(2 * M_PI * i / 360), 0.0, sin(2 * M_PI * i / 360));
+		   /* Connect the source to the effect slot. This tells the source to use the
+			* effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
+			*/
 		   alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
 		   Sleep(30);
 	   }
