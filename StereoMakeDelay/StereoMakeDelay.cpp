@@ -294,11 +294,19 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
 
 	alEffecti(effect, AL_CHORUS_WAVEFORM, 1);
-	alEffecti(effect, AL_CHORUS_PHASE, 0);
-	alEffectf(effect, AL_CHORUS_RATE, 10.0f);
+	alEffecti(effect, AL_CHORUS_PHASE, 90);
+	alEffectf(effect, AL_CHORUS_RATE, 1.1f);
 	alEffectf(effect, AL_CHORUS_DEPTH, 0.1f);
 	alEffectf(effect, AL_CHORUS_FEEDBACK, 0.25f);
-	alEffectf(effect, AL_CHORUS_DELAY, 0.016f);
+	alEffectf(effect, AL_CHORUS_DELAY, 0.0f);
+
+	/*alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
+
+	alEffectf(effect, AL_ECHO_DELAY, 0.01f);
+	alEffectf(effect, AL_ECHO_LRDELAY, 0.0f);
+	alEffectf(effect, AL_ECHO_DAMPING, 0.0f);
+	alEffectf(effect, AL_ECHO_FEEDBACK, 0.0f);
+	alEffectf(effect, AL_ECHO_SPREAD, 0.1f);*/
 
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
@@ -861,23 +869,35 @@ int main(int argc, char* argv[])
 	  assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
 
 	  /* Create the source to play the sound with. */
-	  source = 0;
+	  //source = 0;
 	  alGenSources(1, &source);
 	  alSourcei(source, AL_BUFFER, (ALint)buffer);
+
 
 	  /* Connect the source to the effect slot. This tells the source to use the
 	   * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
 	   */
-	   alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+	  // alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+
 	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
 	   /* Play the sound until it finishes. */
 	   alSourcePlay(source);
-	   do {
-		   al_nssleep(10000000);
+
+	   for (int i = 0; i <= 360; i++) {
+		   alSource3f(source, AL_POSITION, cos(2 * M_PI * i / 360), 0.0, sin(2 * M_PI * i / 360));
+		   alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+		   Sleep(30);
+	   }
+
+
+	   /*do {
+		   //al_nssleep(10000000);
 		   alGetSourcei(source, AL_SOURCE_STATE, &state);
+		   //alSource3f(source, AL_POSITION, -2.0, 0.0, 0.0);
+
 		   if ('\r' == getch()) break;
-	   } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
+	   } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);*/
 
 	   /* All done. Delete resources, and close down OpenAL. */
 	   alDeleteSources(1, &source);
