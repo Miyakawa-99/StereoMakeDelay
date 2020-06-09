@@ -29,33 +29,9 @@
   * channel configs and sample types. */
 
 #include <alhelpers.h>
-
 #include <stdio.h>
-#include <errno.h>
-#include <string.h>
-
-#include <al.h>
-#include <alc.h>
-#include <stdarg.h>
-
-
-#include <assert.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <iostream>
 #include <windows.h>
-#include <stdio.h>
-#include <al.h>
-#include <alc.h>
 #include <alext.h>
-#include <math.h>
-#include <conio.h>
-#include <efx.h>//20200505
-#include <efx-presets.h>//20200505
-#include <alhelpers.h>//20200505
-#include <sndfile.hh>//20200505
-#include <sndfile.h>//20200505
 
 
 #ifndef ALC_ENUMERATE_ALL_EXT

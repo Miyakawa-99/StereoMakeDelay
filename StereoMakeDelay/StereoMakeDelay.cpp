@@ -13,41 +13,14 @@
 ///////////StereoGenerate
 #include <assert.h>
 #include <inttypes.h>
-#include <limits.h>
-#include <stdlib.h>
 #include <iostream>
 #include <windows.h>
-#include <stdio.h>
 #include <al.h>
 #include <alc.h>
 #include <alext.h>
-#include <math.h>
-#include <conio.h>
-#include <efx.h>//20200505
-#include <efx-presets.h>//20200505
-#include <alhelpers.h>//20200505
-#include <sndfile.hh>//20200505
-#include <sndfile.h>//20200505
-
-//////20200603
-/*#include <stdarg.h>
-#include <string.h>
-
-#ifndef ALC_ENUMERATE_ALL_EXT
-#define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012
-#define ALC_ALL_DEVICES_SPECIFIER                0x1013
-#endif
-
-#ifndef ALC_EXT_EFX
-#define ALC_EFX_MAJOR_VERSION                    0x20001
-#define ALC_EFX_MINOR_VERSION                    0x20002
-#define ALC_MAX_AUXILIARY_SENDS                  0x20003
-#endif
-
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN*/
-
+#include <efx-presets.h>
+#include <alhelpers.h>
+#include <sndfile.h>
 
 //fopenの警告を無視
 #pragma warning(disable:4996)
@@ -399,7 +372,6 @@ static ALuint LoadSound(const char* filename)
 
 int main(int argc, char* argv[])
 {
-	//EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
 	EFXEAXREVERBPROPERTIES reverb = { 1,180, 1.1f, 0.1f, 0.25f, 0.016f };
 
 	ALuint source, buffer, effect, slot;
