@@ -52,7 +52,6 @@ static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
 static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
 static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
 
-//static LPALGETAUXILIARYEFFECTSLOTFV flLRDelay; //20200506
 
 ////立体音響の生成///////
 class StereoGenerate {
@@ -277,17 +276,17 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	alEffectf(effect, AL_CHORUS_FEEDBACK, 0.25f);
 	alEffectf(effect, AL_CHORUS_DELAY, 0.0f);*/
 
-	/*printf("Using Echo\n");
+	printf("Using Echo\n");
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
 	alEffectf(effect, AL_ECHO_DELAY, 0.0f);
-	alEffectf(effect, AL_ECHO_LRDELAY, 0.0f);
+	alEffectf(effect, AL_ECHO_LRDELAY, 0.000f);
 	alEffectf(effect, AL_ECHO_DAMPING, 0.0f);
-	alEffectf(effect, AL_ECHO_FEEDBACK, 0.0f);*/
+	alEffectf(effect, AL_ECHO_FEEDBACK, 0.0f);
 		
 	
 
-	printf("Using EAX Reverb\n");
+	/*printf("Using EAX Reverb\n");
 
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
 
@@ -313,7 +312,7 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	alEffectf(effect, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
 	alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
 	alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-	alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+	alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
 
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
@@ -406,7 +405,7 @@ static ALuint LoadSound(const char* filename)
 
 int main(int argc, char* argv[])
 {
-	EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
+	EFXEAXREVERBPROPERTIES reverb = { 0.1000f, 0.0000f, 0.0000f, 0.0000f, 0.0000f, 0.1000f, 0.1000f, 0.1000f, 0.0000f, 0.3000f, { 0.0000f, 0.0000f, 0.0000f }, 0.0000f, 0.1000f, { 0.0000f, 0.0000f, 0.0000f }, 0.0750f, 0.0000f, 0.0400f, 0.0000f, 0.892f, 1000.0000f, 20.0000f, 0.0000f, 0x1 };
 
 	ALuint source, buffer, effect, slot;
 	ALenum state;
@@ -474,7 +473,6 @@ int main(int argc, char* argv[])
 
 	/* Create the effect slot object. This is what "plays" an effect on sources
 	 * that connect to it. */
-	 slot = 0;
 	 alGenAuxiliaryEffectSlots(1, &slot);
 
 	 /* Tell the effect slot to use the loaded effect object. Note that the this
@@ -485,7 +483,6 @@ int main(int argc, char* argv[])
 	  assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
 
 	  /* Create the source to play the sound with. */
-	  //source = 0;
 	  alGenSources(1, &source);
 	  alSourcei(source, AL_BUFFER, (ALint)buffer);
 
@@ -504,7 +501,6 @@ int main(int argc, char* argv[])
 		   alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
 		   Sleep(30);
 	   }
-
 
 	   /*do {
 		   //al_nssleep(10000000);
