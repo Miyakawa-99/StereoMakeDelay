@@ -261,20 +261,6 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	ALuint effect = 0;
 	ALenum err;
 	alGenEffects(1, &effect);
-	float reflectionPan =  (0.0000f, 0.0000f, 0.0000f);
-	float reverbPan = (0.0000f, 0.0000f, 0.0000f);
-
-
-
-	/*printf("Using Chorus\n");
-	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CHORUS);
-
-	alEffecti(effect, AL_CHORUS_WAVEFORM, 1);
-	alEffecti(effect, AL_CHORUS_PHASE, 90);
-	alEffectf(effect, AL_CHORUS_RATE, 1.1f);
-	alEffectf(effect, AL_CHORUS_DEPTH, 0.1f);
-	alEffectf(effect, AL_CHORUS_FEEDBACK, 0.25f);
-	alEffectf(effect, AL_CHORUS_DELAY, 0.0f);*/
 
 	printf("Using Echo\n");
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
@@ -284,35 +270,6 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	alEffectf(effect, AL_ECHO_DAMPING, 0.0f);
 	alEffectf(effect, AL_ECHO_FEEDBACK, 0.0f);
 		
-	
-
-	/*printf("Using EAX Reverb\n");
-
-	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
-
-	alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
-	alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
-	alEffectf(effect, AL_EAXREVERB_GAIN, reverb->flGain);
-	alEffectf(effect, AL_EAXREVERB_GAINHF, reverb->flGainHF);
-	alEffectf(effect, AL_EAXREVERB_GAINLF, reverb->flGainLF);
-	alEffectf(effect, AL_EAXREVERB_DECAY_TIME, reverb->flDecayTime);
-	alEffectf(effect, AL_EAXREVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
-	alEffectf(effect, AL_EAXREVERB_DECAY_LFRATIO, reverb->flDecayLFRatio);
-	alEffectf(effect, AL_EAXREVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
-	alEffectf(effect, AL_EAXREVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
-	alEffectfv(effect, AL_EAXREVERB_REFLECTIONS_PAN, reverb->flReflectionsPan);
-	alEffectf(effect, AL_EAXREVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
-	alEffectf(effect, AL_EAXREVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
-	alEffectfv(effect, AL_EAXREVERB_LATE_REVERB_PAN, reverb->flLateReverbPan);
-	alEffectf(effect, AL_EAXREVERB_ECHO_TIME, reverb->flEchoTime);
-	alEffectf(effect, AL_EAXREVERB_ECHO_DEPTH, reverb->flEchoDepth);
-	alEffectf(effect, AL_EAXREVERB_MODULATION_TIME, reverb->flModulationTime);
-	alEffectf(effect, AL_EAXREVERB_MODULATION_DEPTH, reverb->flModulationDepth);
-	alEffectf(effect, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
-	alEffectf(effect, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
-	alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
-	alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-	alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);*/
 
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
