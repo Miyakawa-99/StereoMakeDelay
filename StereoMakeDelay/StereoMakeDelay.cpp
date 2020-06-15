@@ -266,10 +266,14 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
 	alEffectf(effect, AL_ECHO_DELAY, 0.0f);
-	alEffectf(effect, AL_ECHO_LRDELAY, 0.000f);
+	alEffectf(effect, AL_ECHO_LRDELAY, 0.0f);
 	alEffectf(effect, AL_ECHO_DAMPING, 0.0f);
 	alEffectf(effect, AL_ECHO_FEEDBACK, 0.0f);
-		
+	alEffectf(effect, AL_ECHO_SPREAD, -1.0f);
+	/*This property controls how hard panned the individual echoes are.With a value of 1.0, the first
+		‘tap’ will be panned hard left, and the second tap hard right.A value of –1.0 gives the opposite
+		result.Settings nearer to 0.0 result in less emphasized panning.*/
+
 
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
@@ -444,18 +448,20 @@ int main(int argc, char* argv[])
 	  alSourcei(source, AL_BUFFER, (ALint)buffer);
 
 
-
 	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
 	   /* Play the sound until it finishes. */
 	   alSourcePlay(source);
 
 	   for (int i = 0; i <= 360; i++) {
+		   alSourcei(source, AL_LOOPING, AL_TRUE);   // 繰り返し
+
 		   alSource3f(source, AL_POSITION, cos(2 * M_PI * i / 360), 0.0, sin(2 * M_PI * i / 360));
 		   /* Connect the source to the effect slot. This tells the source to use the
 			* effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
 			*/
-		   alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+		   //alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+
 		   Sleep(30);
 	   }
 
