@@ -13,24 +13,16 @@
 ///////////StereoGenerate
 #include <assert.h>
 #include <inttypes.h>
-#include <limits.h>
-#include <stdlib.h>
 #include <iostream>
 #include <windows.h>
-#include <stdio.h>
 #include <al.h>
 #include <alc.h>
-#include <math.h>
-#include <conio.h>
-#include <efx.h>//20200505
-#include <efx-presets.h>//20200505
-#include <alhelpers.h>//20200505
-#include <sndfile.hh>//20200505
-#include <sndfile.h>//20200505
+#include <alext.h>
+#include <efx-presets.h>
+#include <alhelpers.h>
+#include <sndfile.h>
 
 
-
-#pragma comment(lib, "OpenAL32.lib")
 //fopenの警告を無視
 #pragma warning(disable:4996)
 
@@ -60,6 +52,7 @@ static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
 static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
 static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
 static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
+
 
 ////立体音響の生成///////
 class StereoGenerate {
@@ -268,74 +261,31 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 {
 	ALuint effect = 0;
 	ALenum err;
-
-	/* Create the effect object and check if we can do EAX reverb. */
 	alGenEffects(1, &effect);
-	if (alGetEnumValue("AL_EFFECT_EAXREVERB") != 0)
-	{
-		printf("Using EAX Reverb\n");
 
-		/* EAX Reverb is available. Set the EAX effect type then load the
-		 * reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
+	printf("Using Echo\n");
+	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
-		alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
-		alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
-		alEffectf(effect, AL_EAXREVERB_GAIN, reverb->flGain);
-		alEffectf(effect, AL_EAXREVERB_GAINHF, reverb->flGainHF);
-		alEffectf(effect, AL_EAXREVERB_GAINLF, reverb->flGainLF);
-		alEffectf(effect, AL_EAXREVERB_DECAY_TIME, reverb->flDecayTime);
-		alEffectf(effect, AL_EAXREVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
-		alEffectf(effect, AL_EAXREVERB_DECAY_LFRATIO, reverb->flDecayLFRatio);
-		alEffectf(effect, AL_EAXREVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
-		alEffectf(effect, AL_EAXREVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
-		alEffectfv(effect, AL_EAXREVERB_REFLECTIONS_PAN, reverb->flReflectionsPan);
-		alEffectf(effect, AL_EAXREVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
-		alEffectf(effect, AL_EAXREVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
-		alEffectfv(effect, AL_EAXREVERB_LATE_REVERB_PAN, reverb->flLateReverbPan);
-		alEffectf(effect, AL_EAXREVERB_ECHO_TIME, reverb->flEchoTime);
-		alEffectf(effect, AL_EAXREVERB_ECHO_DEPTH, reverb->flEchoDepth);
-		alEffectf(effect, AL_EAXREVERB_MODULATION_TIME, reverb->flModulationTime);
-		alEffectf(effect, AL_EAXREVERB_MODULATION_DEPTH, reverb->flModulationDepth);
-		alEffectf(effect, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
-		alEffectf(effect, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
-		alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
-		alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-		alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
-	}
-	else
-	{
-		printf("Using Standard Reverb\n");
+	alEffectf(effect, AL_ECHO_DELAY, 0.000f);
+	alEffectf(effect, AL_ECHO_LRDELAY, 0.10f);
+	alEffectf(effect, AL_ECHO_DAMPING, 0.000f);
+	alEffectf(effect, AL_ECHO_FEEDBACK, 0.000f);
+	alEffectf(effect, AL_ECHO_SPREAD, -1.000f);
+	/*This property controls how hard panned the individual echoes are.With a value of 1.0, the first
+		‘tap’ will be panned hard left, and the second tap hard right.A value of –1.0 gives the opposite
+		result.Settings nearer to 0.0 result in less emphasized panning.*/
 
-		/* No EAX Reverb. Set the standard reverb effect type then load the
-		 * available reverb properties. */
-		alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
-
-		alEffectf(effect, AL_REVERB_DENSITY, reverb->flDensity);
-		alEffectf(effect, AL_REVERB_DIFFUSION, reverb->flDiffusion);
-		alEffectf(effect, AL_REVERB_GAIN, reverb->flGain);
-		alEffectf(effect, AL_REVERB_GAINHF, reverb->flGainHF);
-		alEffectf(effect, AL_REVERB_DECAY_TIME, reverb->flDecayTime);
-		alEffectf(effect, AL_REVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
-		alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
-		alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
-		alEffectf(effect, AL_REVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
-		alEffectf(effect, AL_REVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
-		alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
-		alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-		alEffecti(effect, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
-	}
 
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
 	if (err != AL_NO_ERROR)
 	{
-		fprintf(stderr, "OpenAL error: %s\n", alGetString(err));
+		fprintf(stderr, "OpenAL LoadEffectError: %s\n", alGetString(err));
+
 		if (alIsEffect(effect))
 			alDeleteEffects(1, &effect);
 		return 0;
 	}
-
 	return effect;
 }
 
@@ -367,10 +317,14 @@ static ALuint LoadSound(const char* filename)
 	}
 
 	/* Get the sound format, and figure out the OpenAL format */
-	if (sfinfo.channels == 1)
+	if (sfinfo.channels == 1) {
 		format = AL_FORMAT_MONO16;
-	else if (sfinfo.channels == 2)
-		format = AL_FORMAT_STEREO16;
+		fprintf(stderr, "1 channels \n");
+	}
+	else if (sfinfo.channels == 2) {
+		format = AL_FORMAT_MONO16;
+		fprintf(stderr, "2 channels \n");
+	}
 	else
 	{
 		fprintf(stderr, "Unsupported channel count: %d\n", sfinfo.channels);
@@ -380,6 +334,18 @@ static ALuint LoadSound(const char* filename)
 
 	/* Decode the whole audio file to a buffer. */
 	membuf = (short*)malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
+
+
+	//ステレオだった場合モノラルに統合
+	/*if (sfinfo.channels == 2) {
+		for (int i = 0; i < sfinfo.frames; i += 2) {
+			//平均値をとる
+			membuf[i / 2] = membuf[i] / 2 + membuf[i + 1] / 2;
+		}
+		//長さもモノラルに直す
+		sfinfo.frames = sfinfo.frames / sfinfo.channels;
+	}*/
+
 
 	num_frames = sf_readf_short(sndfile, membuf, sfinfo.frames);
 	if (num_frames < 1)
@@ -414,20 +380,20 @@ static ALuint LoadSound(const char* filename)
 	return buffer;
 }
 
-int main(int argc, char** argv)
+
+int main(int argc, char* argv[])
 {
-	EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
+	EFXEAXREVERBPROPERTIES reverb = { 0.1000f, 0.0000f, 0.0000f, 0.0000f, 0.0000f, 0.1000f, 0.1000f, 0.1000f, 0.0000f, 0.3000f, { 0.0000f, 0.0000f, 0.0000f }, 0.0000f, 0.1000f, { 0.0000f, 0.0000f, 0.0000f }, 0.0750f, 0.0000f, 0.0400f, 0.0000f, 0.892f, 1000.0000f, 20.0000f, 0.0000f, 0x1 };
+
 	ALuint source, buffer, effect, slot;
 	ALenum state;
 
-	/* Print out usage if no arguments were specified */
 	if (argc < 2)
 	{
 		fprintf(stderr, "Usage: %s [-device <name] <filename>\n", argv[0]);
 		return 1;
 	}
 
-	/* Initialize OpenAL, and check for EFX support. */
 	argv++; argc--;
 	if (InitAL(&argv, &argc) != 0)
 		return 1;
@@ -439,7 +405,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	/* Define a macro to help load the function pointers. */
+//Define a macro to help load the function pointers.
 #define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
 	LOAD_PROC(LPALGENEFFECTS, alGenEffects);
 	LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
@@ -466,7 +432,7 @@ int main(int argc, char** argv)
 	LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 
-	/* Load the sound into a buffer. */
+	// Load the sound into a buffer.
 	buffer = LoadSound(argv[0]);
 	if (!buffer)
 	{
@@ -485,77 +451,57 @@ int main(int argc, char** argv)
 
 	/* Create the effect slot object. This is what "plays" an effect on sources
 	 * that connect to it. */
-	slot = 0;
-	alGenAuxiliaryEffectSlots(1, &slot);
+	 alGenAuxiliaryEffectSlots(1, &slot);
 
-	/* Tell the effect slot to use the loaded effect object. Note that the this
-	 * effectively copies the effect properties. You can modify or delete the
-	 * effect object afterward without affecting the effect slot.
-	 */
-	alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
-	assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
+	 /* Tell the effect slot to use the loaded effect object. Note that the this
+	  * effectively copies the effect properties. You can modify or delete the
+	  * effect object afterward without affecting the effect slot.
+	  */
+	  alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+	  assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
 
-	/* Create the source to play the sound with. */
-	source = 0;
-	alGenSources(1, &source);
-	alSourcei(source, AL_BUFFER, (ALint)buffer);
+	  /* Create the source to play the sound with. */
+	  alGenSources(1, &source);
+	  alSourcei(source, AL_BUFFER, (ALint)buffer);
 
-	/* Connect the source to the effect slot. This tells the source to use the
-	 * effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
-	 */
-	alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
-	assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
-	/* Play the sound until it finishes. */
-	alSourcePlay(source);
-	do {
-		al_nssleep(10000000);
-		alGetSourcei(source, AL_SOURCE_STATE, &state);
-	} while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
+	   assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
-	/* All done. Delete resources, and close down OpenAL. */
-	alDeleteSources(1, &source);
-	alDeleteAuxiliaryEffectSlots(1, &slot);
-	alDeleteEffects(1, &effect);
-	alDeleteBuffers(1, &buffer);
+	   /* Play the sound until it finishes. */
+	   alSourcePlay(source);
+	   //alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
 
-	CloseAL();
+
+	   for (int i = 0; i <= 360; i++) {
+		   alSourcei(source, AL_LOOPING, AL_TRUE);   // 繰り返し
+		   alSource3f(source, AL_POSITION, cos(2 * M_PI * i / 360), 0.0, sin(2 * M_PI * i / 360));
+
+		   //alSourcef(source, AL_SOURCE_RADIUS,50);
+		   //ALfloat angles[2] = { 30, 100 };
+		   //alSourcefv(source, AL_STEREO_ANGLES, angles);
+		   /* Connect the source to the effect slot. This tells the source to use the
+			* effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
+			*/
+		   Sleep(30);
+	   }
+
+	   /*do {
+		   //al_nssleep(10000000);
+		   alGetSourcei(source, AL_SOURCE_STATE, &state);
+		   //alSource3f(source, AL_POSITION, -2.0, 0.0, 0.0);
+
+		   if ('\r' == getch()) break;
+	   } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);*/
+
+	   /* All done. Delete resources, and close down OpenAL. */
+	   alDeleteSources(1, &source);
+	   alDeleteAuxiliaryEffectSlots(1, &slot);
+	   alDeleteEffects(1, &effect);
+	   alDeleteBuffers(1, &buffer);
+
+	   CloseAL();
+
 
 	return 0;
+
 }
-
-/*int main(int argc, char** argv)
-{
-	EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-	// Initialize OpenAL, and check for EFX support. 
-	argv++; argc--;
-	if (InitAL(&argv, &argc) != 0)
-		return 1;
-
-	if (!alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
-	{
-		fprintf(stderr, "Error: EFX not supported\n");
-		CloseAL();
-		return 1;
-	}
-	while(1) {
-		//StereoGenerate Sound;
-		static bool IsFirst = true;
-		if (IsFirst && Sound.SoundSet("asano.wav") == 0) {
-			Sound.SoundPlay();
-			IsFirst = false;
-		}
-		if ('\r' == getch()) break;
-	}
-}*/
-
-// プログラムの実行: Ctrl + F5 または [デバッグ] > [デバッグなしで開始] メニュー
-// プログラムのデバッグ: F5 または [デバッグ] > [デバッグの開始] メニュー
-
-// 作業を開始するためのヒント: 
-//    1. ソリューション エクスプローラー ウィンドウを使用してファイルを追加/管理します 
-//   2. チーム エクスプローラー ウィンドウを使用してソース管理に接続します
-//   3. 出力ウィンドウを使用して、ビルド出力とその他のメッセージを表示します
-//   4. エラー一覧ウィンドウを使用してエラーを表示します
-//   5. [プロジェクト] > [新しい項目の追加] と移動して新しいコード ファイルを作成するか、[プロジェクト] > [既存の項目の追加] と移動して既存のコード ファイルをプロジェクトに追加します
-//   6. 後ほどこのプロジェクトを再び開く場合、[ファイル] > [開く] > [プロジェクト] と移動して .sln ファイルを選択します
