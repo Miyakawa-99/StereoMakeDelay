@@ -22,6 +22,7 @@
 #include <alhelpers.h>
 #include <sndfile.h>
 
+
 //fopenの警告を無視
 #pragma warning(disable:4996)
 
@@ -265,11 +266,11 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 	printf("Using Echo\n");
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
-	alEffectf(effect, AL_ECHO_DELAY, 0.0f);
-	alEffectf(effect, AL_ECHO_LRDELAY, 0.0f);
-	alEffectf(effect, AL_ECHO_DAMPING, 0.0f);
-	alEffectf(effect, AL_ECHO_FEEDBACK, 0.0f);
-	alEffectf(effect, AL_ECHO_SPREAD, -1.0f);
+	alEffectf(effect, AL_ECHO_DELAY, 0.000f);
+	alEffectf(effect, AL_ECHO_LRDELAY, 0.10f);
+	alEffectf(effect, AL_ECHO_DAMPING, 0.000f);
+	alEffectf(effect, AL_ECHO_FEEDBACK, 0.000f);
+	alEffectf(effect, AL_ECHO_SPREAD, -1.000f);
 	/*This property controls how hard panned the individual echoes are.With a value of 1.0, the first
 		‘tap’ will be panned hard left, and the second tap hard right.A value of –1.0 gives the opposite
 		result.Settings nearer to 0.0 result in less emphasized panning.*/
@@ -316,10 +317,14 @@ static ALuint LoadSound(const char* filename)
 	}
 
 	/* Get the sound format, and figure out the OpenAL format */
-	if (sfinfo.channels == 1)
+	if (sfinfo.channels == 1) {
 		format = AL_FORMAT_MONO16;
-	else if (sfinfo.channels == 2)
-		format = AL_FORMAT_STEREO16;
+		fprintf(stderr, "1 channels \n");
+	}
+	else if (sfinfo.channels == 2) {
+		format = AL_FORMAT_MONO16;
+		fprintf(stderr, "2 channels \n");
+	}
 	else
 	{
 		fprintf(stderr, "Unsupported channel count: %d\n", sfinfo.channels);
@@ -329,6 +334,18 @@ static ALuint LoadSound(const char* filename)
 
 	/* Decode the whole audio file to a buffer. */
 	membuf = (short*)malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
+
+
+	//ステレオだった場合モノラルに統合
+	/*if (sfinfo.channels == 2) {
+		for (int i = 0; i < sfinfo.frames; i += 2) {
+			//平均値をとる
+			membuf[i / 2] = membuf[i] / 2 + membuf[i + 1] / 2;
+		}
+		//長さもモノラルに直す
+		sfinfo.frames = sfinfo.frames / sfinfo.channels;
+	}*/
+
 
 	num_frames = sf_readf_short(sndfile, membuf, sfinfo.frames);
 	if (num_frames < 1)
@@ -452,16 +469,19 @@ int main(int argc, char* argv[])
 
 	   /* Play the sound until it finishes. */
 	   alSourcePlay(source);
+	   //alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+
 
 	   for (int i = 0; i <= 360; i++) {
 		   alSourcei(source, AL_LOOPING, AL_TRUE);   // 繰り返し
-
 		   alSource3f(source, AL_POSITION, cos(2 * M_PI * i / 360), 0.0, sin(2 * M_PI * i / 360));
+
+		   //alSourcef(source, AL_SOURCE_RADIUS,50);
+		   //ALfloat angles[2] = { 30, 100 };
+		   //alSourcefv(source, AL_STEREO_ANGLES, angles);
 		   /* Connect the source to the effect slot. This tells the source to use the
 			* effect slot 'slot', on send #0 with the AL_FILTER_NULL filter object.
 			*/
-		   //alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
-
 		   Sleep(30);
 	   }
 
