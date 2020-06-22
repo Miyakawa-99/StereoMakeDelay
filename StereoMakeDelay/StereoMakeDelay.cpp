@@ -24,12 +24,11 @@
 #ifndef SDL_AUDIO_BITSIZE
 #define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
 #endif
-
 #ifndef M_PI
 #define M_PI    (3.14159265358979323846)
 #endif
 
-    typedef struct {
+typedef struct {
     ALCdevice* Device;
     ALCcontext* Context;
 
@@ -110,10 +109,14 @@ static ALuint CreateSineWave(void)
 
 int main(int argc, char* argv[])
 {
+    ALCdevice* Softdevice;
     const ALCchar* devicename = "OpenAL Soft";
+    const ALCchar* deviceName = "OpenAL Soft on";
+    Softdevice = alcOpenDevice(devicename);
 
     PlaybackInfo playback = { NULL, NULL, 0 };
     SDL_AudioSpec desired, obtained;
+    SDL_AudioDeviceID dev;
     ALuint source, buffer;
     ALCint attrs[16];
     ALenum state;
@@ -121,7 +124,7 @@ int main(int argc, char* argv[])
     (void)argv;
 
     /* Print out error if extension is missing. */
-    if (!alcIsExtensionPresent(alcOpenDevice(devicename), "ALC_SOFT_loopback"))
+    if (!alcIsExtensionPresent(Softdevice, "ALC_SOFT_loopback"))
     {
         fprintf(stderr, "Error: ALC_SOFT_loopback not supported!\n");
         return 1;
@@ -148,13 +151,47 @@ int main(int argc, char* argv[])
     desired.samples = 4096;
     desired.callback = RenderSDLSamples;
     desired.userdata = &playback;
-    if (SDL_OpenAudio(&desired, &obtained) != 0)
+
+
+    //SDL_OpenAudio(&desired, &obtained);
+    ////////////////////////////////////////////
+    int i, count = SDL_GetNumAudioDevices(0);
+
+    for (i = 0; i < count; ++i) {
+        SDL_Log("DeviceList %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+    }
+
+    int k, count2 = SDL_GetNumAudioDrivers();
+    for (k = 0; k < count2; ++k) {
+        SDL_Log("DriverList %d: %s", k, SDL_GetAudioDriver(k));
+    }
+    /////////////////////////////////////////////////////
+    fprintf(stderr, "CurrentAudioDriver: %s\n", SDL_GetCurrentAudioDriver());
+
+    dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, 1);
+    if (dev == 0)
     {
         SDL_Quit();
         fprintf(stderr, "Failed to open SDL audio: %s\n", SDL_GetError());
         return 1;
     }
 
+    /*dev = SDL_OpenAudio(&desired, &obtained);
+    if (dev != 0)
+    {
+        SDL_Quit();
+        fprintf(stderr, "Failed to open SDL audio: %s\n", SDL_GetError());
+        return 1;
+    }*/
+    switch (SDL_GetAudioDeviceStatus(dev))
+    {
+        case SDL_AUDIO_STOPPED: printf("停止中\n"); break;
+        case SDL_AUDIO_PLAYING: printf("再生中\n"); break;
+        case SDL_AUDIO_PAUSED: printf("一時停止中\n"); break;
+        default: printf("???"); break;
+    }
+
+    //////////////////////////////////////////////////////
     /* Set up our OpenAL attributes based on what we got from SDL. */
     attrs[0] = ALC_FORMAT_CHANNELS_SOFT;
     if (obtained.channels == 1)
@@ -168,6 +205,7 @@ int main(int argc, char* argv[])
     }
 
     attrs[2] = ALC_FORMAT_TYPE_SOFT;
+    fprintf(stderr, "SDL format: 0x%04x\n", obtained.format);
     if (obtained.format == AUDIO_U8)
         attrs[3] = ALC_UNSIGNED_BYTE_SOFT;
     else if (obtained.format == AUDIO_S8)
@@ -176,6 +214,8 @@ int main(int argc, char* argv[])
         attrs[3] = ALC_UNSIGNED_SHORT_SOFT;
     else if (obtained.format == AUDIO_S16SYS)
         attrs[3] = ALC_SHORT_SOFT;
+    else if (obtained.format == AUDIO_F32LSB)//
+        attrs[3] = ALC_FLOAT_SOFT;//
 
     else
     {
@@ -191,7 +231,7 @@ int main(int argc, char* argv[])
     playback.FrameSize = obtained.channels * SDL_AUDIO_BITSIZE(obtained.format) / 8;
 
     /* Initialize OpenAL loopback device, using our format attributes. */
-    playback.Device = alcLoopbackOpenDeviceSOFT(NULL);
+    playback.Device = alcLoopbackOpenDeviceSOFT(NULL);/////
     if (!playback.Device)
     {
         fprintf(stderr, "Failed to open loopback device!\n");
