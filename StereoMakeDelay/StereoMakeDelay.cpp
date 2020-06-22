@@ -275,7 +275,6 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
 		‘tap’ will be panned hard left, and the second tap hard right.A value of –1.0 gives the opposite
 		result.Settings nearer to 0.0 result in less emphasized panning.*/
 
-
 	/* Check if an error occured, and clean up if so. */
 	err = alGetError();
 	if (err != AL_NO_ERROR)
