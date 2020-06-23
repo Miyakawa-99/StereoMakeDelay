@@ -15,13 +15,13 @@ int main() {
 	// バッファ の 生成 
 	const int queue_buffer_num = 4; 
 	std:: array < ALuint, queue_buffer_num > buffer_id; 
-	alGenBuffers( buffer_id. size(), &buffer_id[ 0]); 
-	for (size_t i = 0; i < buffer_id. size(); ++ i) { 
+	alGenBuffers( buffer_id.size(), &buffer_id[ 0]); 
+	for (size_t i = 0; i < buffer_id.size(); ++ i) { 
 		// 一 秒 ぶん の サイン 波 を 生成 
 		const size_t pcm_freq = 44100; 
 		const float key_freq = 440.0 * (i + 1); 
 		std:: array < ALshort, pcm_freq > pcm_data; 
-		for (size_t h = 0; h < pcm_data. size(); ++ h) { 
+		for (size_t h = 0; h < pcm_data.size(); ++ h) { 
 			pcm_data[h] = std:: sin( key_freq * M_PI * 2.0 * h / pcm_freq) * 
 				std:: numeric_limits < ALshort >:: max(); 
 		} 
