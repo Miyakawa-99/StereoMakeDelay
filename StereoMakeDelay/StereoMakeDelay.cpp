@@ -1,306 +1,396 @@
-﻿
-/* This file contains an example for using the loopback device for custom
- * output handling.
+﻿/*
+ * OpenAL Callback-based Stream Example
+ *
+ * Copyright (c) 2020 by Chris Robinson <chris.kcat@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#include <assert.h>
-#include <math.h>
+ /* This file contains a streaming audio player using a callback buffer. */
+
+#include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 
-#include "SDL.h"
-#include "SDL_audio.h"
-#include "SDL_error.h"
-#include "SDL_stdinc.h"
+#include <atomic>
+#include <chrono>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
+#include <algorithm>
+
+#include "sndfile.h"
 
 #include "al.h"
 #include "alc.h"
-#include "alext.h"
 
 #include "alhelpers.h"
 
-#ifndef SDL_AUDIO_MASK_BITSIZE
-#define SDL_AUDIO_MASK_BITSIZE (0xFF)
+
+#ifndef AL_SOFT_callback_buffer
+#define AL_SOFT_callback_buffer
+typedef unsigned int ALbitfieldSOFT;
+#define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
+#define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
+typedef ALsizei(AL_APIENTRY* LPALBUFFERCALLBACKTYPESOFT)(ALvoid* userptr, ALvoid* sampledata, ALsizei numsamples);
+typedef void (AL_APIENTRY* LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, LPALBUFFERCALLBACKTYPESOFT callback, ALvoid* userptr, ALbitfieldSOFT flags);
+typedef void (AL_APIENTRY* LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid** value);
+typedef void (AL_APIENTRY* LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid** value1, ALvoid** value2, ALvoid** value3);
+typedef void (AL_APIENTRY* LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid** values);
 #endif
-#ifndef SDL_AUDIO_BITSIZE
-#define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
-#endif
-#ifndef M_PI
-#define M_PI    (3.14159265358979323846)
-#endif
 
-typedef struct {
-    ALCdevice* Device;
-    ALCcontext* Context;
+namespace {
 
-    ALCsizei FrameSize;
-} PlaybackInfo;
+    using std::chrono::seconds;
+    using std::chrono::nanoseconds;
 
-static LPALCLOOPBACKOPENDEVICESOFT alcLoopbackOpenDeviceSOFT;
-static LPALCISRENDERFORMATSUPPORTEDSOFT alcIsRenderFormatSupportedSOFT;
-static LPALCRENDERSAMPLESSOFT alcRenderSamplesSOFT;
+    LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
 
+    struct StreamPlayer {
+        /* A lockless ring-buffer (supports single-provider, single-consumer
+         * operation).
+         */
+        std::unique_ptr<ALbyte[]> mBufferData;
+        size_t mBufferDataSize{ 0 };
+        std::atomic<size_t> mReadPos{ 0 };
+        std::atomic<size_t> mWritePos{ 0 };
 
-void SDLCALL RenderSDLSamples(void* userdata, Uint8 * stream, int len)
+        /* The buffer to get the callback, and source to play with. */
+        ALuint mBuffer{ 0 }, mSource{ 0 };
+        size_t mStartOffset{ 0 };
+
+        /* Handle for the audio file to decode. */
+        SNDFILE* mSndfile{ nullptr };
+        SF_INFO mSfInfo{};
+        size_t mDecoderOffset{ 0 };
+
+        /* The format of the callback samples. */
+        ALenum mFormat;
+
+        StreamPlayer()
+        {
+            alGenBuffers(1, &mBuffer);
+            if (ALenum err{ alGetError() })
+                throw std::runtime_error{ "alGenBuffers failed" };
+            alGenSources(1, &mSource);
+            if (ALenum err{ alGetError() })
+            {
+                alDeleteBuffers(1, &mBuffer);
+                throw std::runtime_error{ "alGenSources failed" };
+            }
+        }
+        ~StreamPlayer()
+        {
+            alDeleteSources(1, &mSource);
+            alDeleteBuffers(1, &mBuffer);
+            if (mSndfile)
+                sf_close(mSndfile);
+        }
+
+        void close()
+        {
+            if (mSndfile)
+            {
+                alSourceRewind(mSource);
+                alSourcei(mSource, AL_BUFFER, 0);
+                sf_close(mSndfile);
+                mSndfile = nullptr;
+            }
+        }
+
+        bool open(const char* filename)
+        {
+            close();
+
+            /* Open the file and figure out the OpenAL format. */
+            mSndfile = sf_open(filename, SFM_READ, &mSfInfo);
+            if (!mSndfile)
+            {
+                fprintf(stderr, "Could not open audio in %s: %s\n", filename, sf_strerror(mSndfile));
+                return false;
+            }
+
+            mFormat = AL_NONE;
+            if (mSfInfo.channels == 1)
+                mFormat = AL_FORMAT_MONO16;
+            else if (mSfInfo.channels == 2)
+                mFormat = AL_FORMAT_STEREO16;
+            else
+            {
+                fprintf(stderr, "Unsupported channel count: %d\n", mSfInfo.channels);
+                sf_close(mSndfile);
+                mSndfile = nullptr;
+
+                return false;
+            }
+
+            /* Set a 1s ring buffer size. */
+            mBufferDataSize = static_cast<ALuint>(mSfInfo.samplerate * mSfInfo.channels) * sizeof(short);
+            mBufferData.reset(new ALbyte[mBufferDataSize]);
+            mReadPos.store(0, std::memory_order_relaxed);
+            mWritePos.store(0, std::memory_order_relaxed);
+            mDecoderOffset = 0;
+
+            return true;
+        }
+
+        /* The actual C-style callback just forwards to the non-static method. Not
+         * strictly needed and the compiler will optimize it to a normal function,
+         * but it allows the callback implementation to have a nice 'this' pointer
+         * with normal member access.
+         */
+        static ALsizei AL_APIENTRY bufferCallbackC(void* userptr, void* data, ALsizei size)
+        {
+            return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size);
+        }
+        ALsizei bufferCallback(void* data, ALsizei size)
+        {
+            /* NOTE: The callback *MUST* be real-time safe! That means no blocking,
+             * no allocations or deallocations, no I/O, no page faults, or calls to
+             * functions that could do these things (this includes calling to
+             * libraries like SDL_sound, libsndfile, ffmpeg, etc). Nothing should
+             * unexpectedly stall this call since the audio has to get to the
+             * device on time.
+             */
+            ALsizei got{ 0 };
+
+            size_t roffset{ mReadPos.load(std::memory_order_acquire) };
+            while (got < size)
+            {
+                /* If the write offset == read offset, there's nothing left in the
+                 * ring-buffer. Break from the loop and give what has been written.
+                 */
+                const size_t woffset{ mWritePos.load(std::memory_order_relaxed) };
+                if (woffset == roffset) break;
+
+                /* If the write offset is behind the read offset, the readable
+                 * portion wrapped around. Just read up to the end of the buffer in
+                 * that case, otherwise read up to the write offset. Also limit the
+                 * amount to copy given how much is remaining to write.
+                 */
+                size_t todo{ ((woffset < roffset) ? mBufferDataSize : woffset) - roffset };
+                todo = std::min<size_t>(todo, static_cast<ALuint>(size - got));
+
+                /* Copy from the ring buffer to the provided output buffer. Wrap
+                 * the resulting read offset if it reached the end of the ring-
+                 * buffer.
+                 */
+                memcpy(data, &mBufferData[roffset], todo);
+                data = static_cast<ALbyte*>(data) + todo;
+                got += static_cast<ALsizei>(todo);
+
+                roffset += todo;
+                if (roffset == mBufferDataSize)
+                    roffset = 0;
+            }
+            /* Finally, store the updated read offset, and return how many bytes
+             * have been written.
+             */
+            mReadPos.store(roffset, std::memory_order_release);
+
+            return got;
+        }
+
+        bool prepare()
+        {
+            alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, bufferCallbackC, this, 0);
+            alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
+            if (ALenum err{ alGetError() })
+            {
+                fprintf(stderr, "Failed to set callback: %s (0x%04x)\n", alGetString(err), err);
+                return false;
+            }
+            return true;
+        }
+
+        bool update()
+        {
+            ALenum state;
+            ALint pos;
+            alGetSourcei(mSource, AL_SAMPLE_OFFSET, &pos);
+            alGetSourcei(mSource, AL_SOURCE_STATE, &state);
+
+            const size_t frame_size{ static_cast<ALuint>(mSfInfo.channels) * sizeof(short) };
+            size_t woffset{ mWritePos.load(std::memory_order_acquire) };
+            if (state != AL_INITIAL)
+            {
+                const size_t roffset{ mReadPos.load(std::memory_order_relaxed) };
+                const size_t readable{ ((woffset >= roffset) ? woffset : (mBufferDataSize + woffset)) -
+                    roffset };
+                /* For a stopped (underrun) source, the current playback offset is
+                 * the current decoder offset excluding the readable buffered data.
+                 * For a playing/paused source, it's the source's offset including
+                 * the playback offset the source was started with.
+                 */
+                const size_t curtime{ ((state == AL_STOPPED) ? (mDecoderOffset - readable) / frame_size
+                    : (static_cast<ALuint>(pos) + mStartOffset / frame_size))
+                    / static_cast<ALuint>(mSfInfo.samplerate) };
+                printf("\r%3zus (%3zu%% full)", curtime, readable * 100 / mBufferDataSize);
+            }
+            else
+                fputs("Starting...", stdout);
+            fflush(stdout);
+
+            while (!sf_error(mSndfile))
+            {
+                size_t read_bytes;
+                const size_t roffset{ mReadPos.load(std::memory_order_relaxed) };
+                if (roffset > woffset)
+                {
+                    /* Note that the ring buffer's writable space is one byte less
+                     * than the available area because the write offset ending up
+                     * at the read offset would be interpreted as being empty
+                     * instead of full.
+                     */
+                    const size_t writable{ roffset - woffset - 1 };
+                    if (writable < frame_size) break;
+
+                    sf_count_t num_frames{ sf_readf_short(mSndfile,
+                        reinterpret_cast<short*>(&mBufferData[woffset]),
+                        static_cast<sf_count_t>(writable / frame_size)) };
+                    if (num_frames < 1) break;
+
+                    read_bytes = static_cast<size_t>(num_frames)* frame_size;
+                    woffset += read_bytes;
+                }
+                else
+                {
+                    /* If the read offset is at or behind the write offset, the
+                     * writeable area (might) wrap around. Make sure the sample
+                     * data can fit, and calculate how much can go in front before
+                     * wrapping.
+                     */
+                    const size_t writable{ !roffset ? mBufferDataSize - woffset - 1 :
+                        (mBufferDataSize - woffset) };
+                    if (writable < frame_size) break;
+
+                    sf_count_t num_frames{ sf_readf_short(mSndfile,
+                        reinterpret_cast<short*>(&mBufferData[woffset]),
+                        static_cast<sf_count_t>(writable / frame_size)) };
+                    if (num_frames < 1) break;
+
+                    read_bytes = static_cast<size_t>(num_frames)* frame_size;
+                    woffset += read_bytes;
+                    if (woffset == mBufferDataSize)
+                        woffset = 0;
+                }
+                mWritePos.store(woffset, std::memory_order_release);
+                mDecoderOffset += read_bytes;
+            }
+
+            if (state != AL_PLAYING && state != AL_PAUSED)
+            {
+                /* If the source is not playing or paused, it either underrun
+                 * (AL_STOPPED) or is just getting started (AL_INITIAL). If the
+                 * ring buffer is empty, it's done, otherwise play the source with
+                 * what's available.
+                 */
+                const size_t roffset{ mReadPos.load(std::memory_order_relaxed) };
+                const size_t readable{ ((woffset >= roffset) ? woffset : (mBufferDataSize + woffset)) -
+                    roffset };
+                if (readable == 0)
+                    return false;
+
+                /* Store the playback offset that the source will start reading
+                 * from, so it can be tracked during playback.
+                 */
+                mStartOffset = mDecoderOffset - readable;
+                alSourcePlay(mSource);
+                if (alGetError() != AL_NO_ERROR)
+                    return false;
+            }
+            return true;
+        }
+    };
+
+} // namespace
+
+int main(int argc, char** argv)
 {
-    PlaybackInfo* playback = (PlaybackInfo*)userdata;
-    alcRenderSamplesSOFT(playback->Device, stream, len / playback->FrameSize);
-}
+    /* A simple RAII container for OpenAL startup and shutdown. */
+    struct AudioManager {
+        AudioManager(char*** argv_, int* argc_)
+        {
+            if (InitAL(argv_, argc_) != 0)
+                throw std::runtime_error{ "Failed to initialize OpenAL" };
+        }
+        ~AudioManager() { CloseAL(); }
+    };
 
-
-static const char* ChannelsName(ALCenum chans)
-{
-    switch (chans)
+    /* Print out usage if no arguments were specified */
+    if (argc < 2)
     {
-    case ALC_MONO_SOFT: return "Mono";
-    case ALC_STEREO_SOFT: return "Stereo";
-    case ALC_QUAD_SOFT: return "Quadraphonic";
-    case ALC_5POINT1_SOFT: return "5.1 Surround";
-    case ALC_6POINT1_SOFT: return "6.1 Surround";
-    case ALC_7POINT1_SOFT: return "7.1 Surround";
-    }
-    return "Unknown Channels";
-}
-
-static const char* TypeName(ALCenum type)
-{
-    switch (type)
-    {
-    case ALC_BYTE_SOFT: return "S8";
-    case ALC_UNSIGNED_BYTE_SOFT: return "U8";
-    case ALC_SHORT_SOFT: return "S16";
-    case ALC_UNSIGNED_SHORT_SOFT: return "U16";
-    case ALC_INT_SOFT: return "S32";
-    case ALC_UNSIGNED_INT_SOFT: return "U32";
-    case ALC_FLOAT_SOFT: return "Float32";
-    }
-    return "Unknown Type";
-}
-
-/* Creates a one second buffer containing a sine wave, and returns the new
- * buffer ID. */
-static ALuint CreateSineWave(void)
-{
-    ALshort data[44100 * 4];
-    ALuint buffer;
-    ALenum err;
-    ALuint i;
-
-    for (i = 0; i < 44100 * 4; i++)
-        data[i] = (ALshort)(sin(i / 44100.0 * 1000.0 * 2.0 * M_PI) * 32767.0);
-
-    /* Buffer the audio data into a new buffer object. */
-    buffer = 0;
-    alGenBuffers(1, &buffer);
-    alBufferData(buffer, AL_FORMAT_MONO16, data, sizeof(data), 44100);
-
-    /* Check if an error occured, and clean up if so. */
-    err = alGetError();
-    if (err != AL_NO_ERROR)
-    {
-        fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if (alIsBuffer(buffer))
-            alDeleteBuffers(1, &buffer);
-        return 0;
-    }
-
-    return buffer;
-}
-
-
-int main(int argc, char* argv[])
-{
-    ALCdevice* Softdevice;
-    const ALCchar* devicename = "OpenAL Soft";
-    const ALCchar* deviceName = "OpenAL Soft on";
-    Softdevice = alcOpenDevice(devicename);
-
-    PlaybackInfo playback = { NULL, NULL, 0 };
-    SDL_AudioSpec desired, obtained;
-    SDL_AudioDeviceID dev;
-    ALuint source, buffer;
-    ALCint attrs[16];
-    ALenum state;
-    (void)argc;
-    (void)argv;
-
-    /* Print out error if extension is missing. */
-    if (!alcIsExtensionPresent(Softdevice, "ALC_SOFT_loopback"))
-    {
-        fprintf(stderr, "Error: ALC_SOFT_loopback not supported!\n");
+        fprintf(stderr, "Usage: %s [-device <name>] <filenames...>\n", argv[0]);
         return 1;
     }
 
-    /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = (T)alcGetProcAddress(NULL, #x))
-    LOAD_PROC(LPALCLOOPBACKOPENDEVICESOFT, alcLoopbackOpenDeviceSOFT);
-    LOAD_PROC(LPALCISRENDERFORMATSUPPORTEDSOFT, alcIsRenderFormatSupportedSOFT);
-    LOAD_PROC(LPALCRENDERSAMPLESSOFT, alcRenderSamplesSOFT);
-#undef LOAD_PROC
+    argv++; argc--;
+    AudioManager almgr{ &argv, &argc };
 
-    if (SDL_Init(SDL_INIT_AUDIO) == -1)
+    if (!alIsExtensionPresent("AL_SOFTX_callback_buffer"))
     {
-        fprintf(stderr, "Failed to init SDL audio: %s\n", SDL_GetError());
+        fprintf(stderr, "AL_SOFT_callback_buffer extension not available\n");
         return 1;
     }
 
-    /* Set up SDL audio with our requested format and callback. */
-    desired.channels = 2;
-    desired.format = AUDIO_S16SYS;
-    desired.freq = 44100;
-    desired.padding = 0;
-    desired.samples = 4096;
-    desired.callback = RenderSDLSamples;
-    desired.userdata = &playback;
+    alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
+        alGetProcAddress("alBufferCallbackSOFT"));
 
+    ALCint refresh{ 25 };
+    alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);
 
-    //SDL_OpenAudio(&desired, &obtained);
-    ////////////////////////////////////////////
-    int i, count = SDL_GetNumAudioDevices(0);
+    std::unique_ptr<StreamPlayer> player{ new StreamPlayer{} };
 
-    for (i = 0; i < count; ++i) {
-        SDL_Log("DeviceList %d: %s", i, SDL_GetAudioDeviceName(i, 0));
-    }
-
-    int k, count2 = SDL_GetNumAudioDrivers();
-    for (k = 0; k < count2; ++k) {
-        SDL_Log("DriverList %d: %s", k, SDL_GetAudioDriver(k));
-    }
-    /////////////////////////////////////////////////////
-    fprintf(stderr, "CurrentAudioDriver: %s\n", SDL_GetCurrentAudioDriver());
-
-    dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, 1);
-    if (dev == 0)
+    /* Play each file listed on the command line */
+    for (int i{ 0 }; i < argc; ++i)
     {
-        SDL_Quit();
-        fprintf(stderr, "Failed to open SDL audio: %s\n", SDL_GetError());
-        return 1;
+        if (!player->open(argv[i]))
+            continue;
+
+        /* Get the name portion, without the path, for display. */
+        const char* namepart{ strrchr(argv[i], '/') };
+        if (namepart || (namepart = strrchr(argv[i], '\\')))
+            ++namepart;
+        else
+            namepart = argv[i];
+
+        printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->mFormat),
+            player->mSfInfo.samplerate);
+        fflush(stdout);
+
+        if (!player->prepare())
+        {
+            player->close();
+            continue;
+        }
+
+        while (player->update())
+            std::this_thread::sleep_for(nanoseconds{ seconds{1} } / refresh);
+        putc('\n', stdout);
+
+        /* All done with this file. Close it and go to the next */
+        player->close();
     }
-
-    /*dev = SDL_OpenAudio(&desired, &obtained);
-    if (dev != 0)
-    {
-        SDL_Quit();
-        fprintf(stderr, "Failed to open SDL audio: %s\n", SDL_GetError());
-        return 1;
-    }*/
-    switch (SDL_GetAudioDeviceStatus(dev))
-    {
-        case SDL_AUDIO_STOPPED: printf("停止中\n"); break;
-        case SDL_AUDIO_PLAYING: printf("再生中\n"); break;
-        case SDL_AUDIO_PAUSED: printf("一時停止中\n"); break;
-        default: printf("???"); break;
-    }
-
-    //////////////////////////////////////////////////////
-    /* Set up our OpenAL attributes based on what we got from SDL. */
-    attrs[0] = ALC_FORMAT_CHANNELS_SOFT;
-    if (obtained.channels == 1)
-        attrs[1] = ALC_MONO_SOFT;
-    else if (obtained.channels == 2)
-        attrs[1] = ALC_STEREO_SOFT;
-    else
-    {
-        fprintf(stderr, "Unhandled SDL channel count: %d\n", obtained.channels);
-        goto error;
-    }
-
-    attrs[2] = ALC_FORMAT_TYPE_SOFT;
-    fprintf(stderr, "SDL format: 0x%04x\n", obtained.format);
-    if (obtained.format == AUDIO_U8)
-        attrs[3] = ALC_UNSIGNED_BYTE_SOFT;
-    else if (obtained.format == AUDIO_S8)
-        attrs[3] = ALC_BYTE_SOFT;
-    else if (obtained.format == AUDIO_U16SYS)
-        attrs[3] = ALC_UNSIGNED_SHORT_SOFT;
-    else if (obtained.format == AUDIO_S16SYS)
-        attrs[3] = ALC_SHORT_SOFT;
-    else if (obtained.format == AUDIO_F32LSB)//
-        attrs[3] = ALC_FLOAT_SOFT;//
-
-    else
-    {
-        fprintf(stderr, "Unhandled SDL format: 0x%04x\n", obtained.format);
-        goto error;
-    }
-
-    attrs[4] = ALC_FREQUENCY;
-    attrs[5] = obtained.freq;
-
-    attrs[6] = 0; /* end of list */
-
-    playback.FrameSize = obtained.channels * SDL_AUDIO_BITSIZE(obtained.format) / 8;
-
-    /* Initialize OpenAL loopback device, using our format attributes. */
-    playback.Device = alcLoopbackOpenDeviceSOFT(NULL);/////
-    if (!playback.Device)
-    {
-        fprintf(stderr, "Failed to open loopback device!\n");
-        goto error;
-    }
-    /* Make sure the format is supported before setting them on the device. */
-    if (alcIsRenderFormatSupportedSOFT(playback.Device, attrs[5], attrs[1], attrs[3]) == ALC_FALSE)
-    {
-        fprintf(stderr, "Render format not supported: %s, %s, %dhz\n",
-            ChannelsName(attrs[1]), TypeName(attrs[3]), attrs[5]);
-        goto error;
-    }
-    playback.Context = alcCreateContext(playback.Device, attrs);
-    if (!playback.Context || alcMakeContextCurrent(playback.Context) == ALC_FALSE)
-    {
-        fprintf(stderr, "Failed to set an OpenAL audio context\n");
-        goto error;
-    }
-
-    /* Start SDL playing. Our callback (thus alcRenderSamplesSOFT) will now
-     * start being called regularly to update the AL playback state. */
-    SDL_PauseAudio(0);
-
-    /* Load the sound into a buffer. */
-    buffer = CreateSineWave();
-    if (!buffer)
-    {
-        SDL_CloseAudio();
-        alcDestroyContext(playback.Context);
-        alcCloseDevice(playback.Device);
-        SDL_Quit();
-        return 1;
-    }
-
-    /* Create the source to play the sound with. */
-    source = 0;
-    alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, (ALint)buffer);
-    assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
-
-    /* Play the sound until it finishes. */
-    alSourcePlay(source);
-    do {
-        al_nssleep(10000000);
-        alGetSourcei(source, AL_SOURCE_STATE, &state);
-    } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING);
-
-    /* All done. Delete resources, and close OpenAL. */
-    alDeleteSources(1, &source);
-    alDeleteBuffers(1, &buffer);
-
-    /* Stop SDL playing. */
-    SDL_PauseAudio(1);
-
-    /* Close up OpenAL and SDL. */
-    SDL_CloseAudio();
-    alcDestroyContext(playback.Context);
-    alcCloseDevice(playback.Device);
-    SDL_Quit();
+    /* All done. */
+    printf("Done.\n");
 
     return 0;
-
-error:
-    SDL_CloseAudio();
-    if (playback.Context)
-        alcDestroyContext(playback.Context);
-    if (playback.Device)
-        alcCloseDevice(playback.Device);
-    SDL_Quit();
-
-    return 1;
 }
