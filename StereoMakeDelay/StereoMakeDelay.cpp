@@ -4,6 +4,8 @@
 
 #include <inttypes.h>
 #include <iostream>
+#include <assert.h>
+#include <windows.h>
 
 #include "SDL.h"
 #include "SDL_audio.h"
@@ -75,7 +77,7 @@ static const char* TypeName(ALCenum type)
 static ALuint LoadSound(const char* filename)
 {
     ALenum err, format;
-    ALuint buffer;
+    ALuint buffer,source;
     SNDFILE* sndfile;
     SF_INFO sfinfo;
     short* membuf;
@@ -157,7 +159,14 @@ static ALuint LoadSound(const char* filename)
         return 0;
     }
 
-    return buffer;
+
+    source = 0;
+    alGenSources(1, &source);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);
+    alSource3f(source, AL_POSITION, cos(60), 0.0, sin(60));
+    Sleep(30);
+
+    return source;
 }
 
 
@@ -280,8 +289,8 @@ int main(int argc, char* argv[])
     SDL_PauseAudio(0);
 
     /* Load the sound into a buffer. */
-    buffer = LoadSound("asano.wav");
-    if (!buffer)
+    source = LoadSound("asano.wav");
+    if (!source)
     {
         SDL_CloseAudio();
         alcDestroyContext(playback.Context);
@@ -291,9 +300,9 @@ int main(int argc, char* argv[])
     }
 
     /* Create the source to play the sound with. */
-    source = 0;
+    /*source = 0;
     alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, (ALint)buffer);
+    alSourcei(source, AL_BUFFER, (ALint)buffer);*/
     assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound until it finishes. */
