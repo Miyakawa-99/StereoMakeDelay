@@ -155,6 +155,17 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    //////////////LOG
+    for (int i = 0; i < SDL_GetNumAudioDevices(0); ++i) {
+        SDL_Log("AudioDevice %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+    }
+
+    for (int i = 0; i < SDL_GetNumAudioDrivers(); ++i) {
+        SDL_Log("AudioDrivers %d: %s\n", i, SDL_GetAudioDriver(i));
+    }
+    SDL_Log("CurrentAudioDriver: %s\n", SDL_GetCurrentAudioDriver());
+    ///////////////
+
     /* Set up our OpenAL attributes based on what we got from SDL. */
     attrs[0] = ALC_FORMAT_CHANNELS_SOFT;
     if (obtained.channels == 1)
