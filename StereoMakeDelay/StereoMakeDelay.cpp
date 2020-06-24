@@ -1,13 +1,4 @@
-﻿/*
- * OpenAL Loopback Example
- *
- * Copyright (c) 2013 by Chris Robinson <chris.kcat@gmail.com>
-
- /* This file contains an example for using the loopback device for custom
-  * output handling.
-  */
-
-#include <assert.h>
+﻿#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -22,7 +13,6 @@
 #include "alc.h"
 #include "alext.h"
 #include "alhelpers.h"
-
 #include <sndfile.h>
 
 #ifndef SDL_AUDIO_MASK_BITSIZE
@@ -31,15 +21,11 @@
 #ifndef SDL_AUDIO_BITSIZE
 #define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
 #endif
-
-#ifndef M_PI
-#define M_PI    (3.14159265358979323846)
-#endif
+#define _USE_MATH_DEFINES
 
 typedef struct {
     ALCdevice* Device;
     ALCcontext* Context;
-
     ALCsizei FrameSize;
 } PlaybackInfo;
 
