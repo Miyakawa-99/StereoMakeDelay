@@ -11,6 +11,9 @@
 #include <math.h>
 #include <stdio.h>
 
+#include <inttypes.h>
+#include <iostream>
+
 #include "SDL.h"
 #include "SDL_audio.h"
 #include "SDL_error.h"
@@ -19,6 +22,8 @@
 #include "alc.h"
 #include "alext.h"
 #include "alhelpers.h"
+
+#include <sndfile.h>
 
 #ifndef SDL_AUDIO_MASK_BITSIZE
 #define SDL_AUDIO_MASK_BITSIZE (0xFF)
@@ -79,29 +84,89 @@ static const char* TypeName(ALCenum type)
     return "Unknown Type";
 }
 
-/* Creates a one second buffer containing a sine wave, and returns the new
+/* Creates a one second buffer containing audioFile, and returns the new
  * buffer ID. */
-static ALuint CreateSineWave(void)
+static ALuint LoadSound(const char* filename)
 {
-    ALshort data[44100 * 4];
+    ALenum err, format;
     ALuint buffer;
-    ALenum err;
-    ALuint i;
+    SNDFILE* sndfile;
+    SF_INFO sfinfo;
+    short* membuf;
+    sf_count_t num_frames;
+    ALsizei num_bytes;
 
-    for (i = 0; i < 44100 * 4; i++)
-        data[i] = (ALshort)(sin(i / 44100.0 * 1000.0 * 2.0 * M_PI) * 32767.0);
+    /* Open the audio file and check that it's usable. */
+    sndfile = sf_open(filename, SFM_READ, &sfinfo);
+    if (!sndfile)
+    {
+        fprintf(stderr, "Could not open audio in %s: %s\n", filename, sf_strerror(sndfile));
+        return 0;
+    }
+    if (sfinfo.frames < 1 || sfinfo.frames >(sf_count_t)(INT_MAX / sizeof(short)) / sfinfo.channels)
+    {
+        fprintf(stderr, "Bad sample count in %s (%" PRId64 ")\n", filename, sfinfo.frames);
+        sf_close(sndfile);
+        return 0;
+    }
 
-    /* Buffer the audio data into a new buffer object. */
+    /* Get the sound format, and figure out the OpenAL format */
+    if (sfinfo.channels == 1) {
+        format = AL_FORMAT_MONO16;
+        fprintf(stderr, "1 channels \n");
+    }
+    else if (sfinfo.channels == 2) {
+        format = AL_FORMAT_MONO16;
+        fprintf(stderr, "2 channels \n");
+    }
+    else
+    {
+        fprintf(stderr, "Unsupported channel count: %d\n", sfinfo.channels);
+        sf_close(sndfile);
+        return 0;
+    }
+
+    /* Decode the whole audio file to a buffer. */
+    membuf = (short*)malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
+
+
+    //ステレオだった場合モノラルに統合
+    /*if (sfinfo.channels == 2) {
+        for (int i = 0; i < sfinfo.frames; i += 2) {
+            //平均値をとる
+            membuf[i / 2] = membuf[i] / 2 + membuf[i + 1] / 2;
+        }
+        //長さもモノラルに直す
+        sfinfo.frames = sfinfo.frames / sfinfo.channels;
+    }*/
+
+
+    num_frames = sf_readf_short(sndfile, membuf, sfinfo.frames);
+    if (num_frames < 1)
+    {
+        free(membuf);
+        sf_close(sndfile);
+        fprintf(stderr, "Failed to read samples in %s (%" PRId64 ")\n", filename, num_frames);
+        return 0;
+    }
+    num_bytes = (ALsizei)(num_frames * sfinfo.channels) * (ALsizei)sizeof(short);
+
+    /* Buffer the audio data into a new buffer object, then free the data and
+     * close the file.
+     */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, AL_FORMAT_MONO16, data, sizeof(data), 44100);
+    alBufferData(buffer, format, membuf, num_bytes, sfinfo.samplerate);
+
+    free(membuf);
+    sf_close(sndfile);
 
     /* Check if an error occured, and clean up if so. */
     err = alGetError();
     if (err != AL_NO_ERROR)
     {
         fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if (alIsBuffer(buffer))
+        if (buffer && alIsBuffer(buffer))
             alDeleteBuffers(1, &buffer);
         return 0;
     }
@@ -229,7 +294,7 @@ int main(int argc, char* argv[])
     SDL_PauseAudio(0);
 
     /* Load the sound into a buffer. */
-    buffer = CreateSineWave();
+    buffer = LoadSound("asano.wav");
     if (!buffer)
     {
         SDL_CloseAudio();
