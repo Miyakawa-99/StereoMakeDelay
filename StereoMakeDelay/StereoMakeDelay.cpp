@@ -16,6 +16,7 @@
 #include "alext.h"
 #include "alhelpers.h"
 #include <sndfile.h>
+#include <efx-presets.h>
 
 #ifndef SDL_AUDIO_MASK_BITSIZE
 #define SDL_AUDIO_MASK_BITSIZE (0xFF)
@@ -24,6 +25,33 @@
 #define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
 #endif
 #define _USE_MATH_DEFINES
+
+/* Effect object functions */
+static LPALGENEFFECTS alGenEffects;
+static LPALDELETEEFFECTS alDeleteEffects;
+static LPALISEFFECT alIsEffect;
+static LPALEFFECTI alEffecti;
+static LPALEFFECTIV alEffectiv;
+static LPALEFFECTF alEffectf;
+static LPALEFFECTFV alEffectfv;
+static LPALGETEFFECTI alGetEffecti;
+static LPALGETEFFECTIV alGetEffectiv;
+static LPALGETEFFECTF alGetEffectf;
+static LPALGETEFFECTFV alGetEffectfv;
+
+
+/* Auxiliary Effect Slot object functions */
+static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
+static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
+static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
+static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
+static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
+static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
+static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
+static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
+static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
+static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
+static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
 
 typedef struct {
     ALCdevice* Device;
@@ -72,6 +100,38 @@ static const char* TypeName(ALCenum type)
     return "Unknown Type";
 }
 
+
+/* LoadEffect loads the given reverb properties into a new OpenAL effect
+ * object, and returns the new effect ID. */
+static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
+{
+    ALuint effect = 0;
+    ALenum err;
+    alGenEffects(1, &effect);
+
+    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
+
+    alEffectf(effect, AL_ECHO_DELAY, 0.000f);
+    alEffectf(effect, AL_ECHO_LRDELAY, 0.10f);
+    alEffectf(effect, AL_ECHO_DAMPING, 0.000f);
+    alEffectf(effect, AL_ECHO_FEEDBACK, 0.000f);
+    alEffectf(effect, AL_ECHO_SPREAD, -1.000f);
+    /*This property controls how hard panned the individual echoes are.With a value of 1.0, the first
+        ‘tap’ will be panned hard left, and the second tap hard right.A value of –1.0 gives the opposite
+        result.Settings nearer to 0.0 result in less emphasized panning.*/
+
+        /* Check if an error occured, and clean up if so. */
+    err = alGetError();
+    if (err != AL_NO_ERROR)
+    {
+        fprintf(stderr, "OpenAL LoadEffectError: %s\n", alGetString(err));
+
+        if (alIsEffect(effect))
+            alDeleteEffects(1, &effect);
+        return 0;
+    }
+    return effect;
+}
 /* Creates a one second buffer containing audioFile, and returns the new
  * buffer ID. */
 static ALuint LoadSound(const char* filename)
@@ -163,7 +223,7 @@ static ALuint LoadSound(const char* filename)
     source = 0;
     alGenSources(1, &source);
     alSourcei(source, AL_BUFFER, (ALint)buffer);
-    alSource3f(source, AL_POSITION, cos(60), 0.0, sin(60));
+    alSource3f(source, AL_POSITION, 1.5,0.0,1.5);
     Sleep(30);
 
     return source;
@@ -172,9 +232,11 @@ static ALuint LoadSound(const char* filename)
 
 int main(int argc, char* argv[])
 {
+
+    EFXEAXREVERBPROPERTIES reverb = { 0.1000f, 0.0000f, 0.0000f, 0.0000f, 0.0000f, 0.1000f, 0.1000f, 0.1000f, 0.0000f, 0.3000f, { 0.0000f, 0.0000f, 0.0000f }, 0.0000f, 0.1000f, { 0.0000f, 0.0000f, 0.0000f }, 0.0750f, 0.0000f, 0.0400f, 0.0000f, 0.892f, 1000.0000f, 20.0000f, 0.0000f, 0x1 };
     PlaybackInfo playback = { NULL, NULL, 0 };
     SDL_AudioSpec desired, obtained;
-    ALuint source, buffer;
+    ALuint source, buffer, effect, slot;;
     ALCint attrs[16];
     ALenum state;
     (void)argc;
@@ -298,6 +360,51 @@ int main(int argc, char* argv[])
         SDL_Quit();
         return 1;
     }
+    //Define a macro to help load the function pointers.
+#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+    LOAD_PROC(LPALGENEFFECTS, alGenEffects);
+    LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
+    LOAD_PROC(LPALISEFFECT, alIsEffect);
+    LOAD_PROC(LPALEFFECTI, alEffecti);
+    LOAD_PROC(LPALEFFECTIV, alEffectiv);
+    LOAD_PROC(LPALEFFECTF, alEffectf);
+    LOAD_PROC(LPALEFFECTFV, alEffectfv);
+    LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
+    LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
+    LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
+    LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
+
+    LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
+    LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
+    LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
+    LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
+    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
+#undef LOAD_PROC
+
+    effect = LoadEffect(&reverb);
+    if (!effect)
+    {
+        alDeleteBuffers(1, &buffer);
+        CloseAL();
+        return 1;
+    }
+
+    /* Create the effect slot object. This is what "plays" an effect on sources
+     * that connect to it. */
+    alGenAuxiliaryEffectSlots(1, &slot);
+
+    /* Tell the effect slot to use the loaded effect object. Note that the this
+     * effectively copies the effect properties. You can modify or delete the
+     * effect object afterward without affecting the effect slot.
+     */
+    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+    assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
 
     /* Create the source to play the sound with. */
     /*source = 0;
@@ -305,6 +412,7 @@ int main(int argc, char* argv[])
     alSourcei(source, AL_BUFFER, (ALint)buffer);*/
     assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
+    alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
     /* Play the sound until it finishes. */
     alSourcePlay(source);
     do {
