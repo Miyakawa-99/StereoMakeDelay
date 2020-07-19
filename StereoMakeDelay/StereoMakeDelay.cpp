@@ -18,6 +18,13 @@
 #include <sndfile.h>
 #include <efx-presets.h>
 
+//wasapi
+#include <mmdeviceapi.h>
+#include <Audioclient.h>
+#include <audiopolicy.h>
+#include <endpointvolume.h>
+#include <FunctionDiscoveryKeys_devpkey.h>
+
 #ifndef SDL_AUDIO_MASK_BITSIZE
 #define SDL_AUDIO_MASK_BITSIZE (0xFF)
 #endif
@@ -223,7 +230,7 @@ static ALuint LoadSound(const char* filename)
     source = 0;
     alGenSources(1, &source);
     alSourcei(source, AL_BUFFER, (ALint)buffer);
-    alSource3f(source, AL_POSITION, 1.5,0.0,1.5);
+    alSource3f(source, AL_POSITION, -0.2,0.0,0.2);
     Sleep(30);
 
     return source;
@@ -387,24 +394,23 @@ int main(int argc, char* argv[])
     LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
 
-    effect = LoadEffect(&reverb);
+    /*effect = LoadEffect(&reverb);
     if (!effect)
     {
         alDeleteBuffers(1, &buffer);
         CloseAL();
         return 1;
-    }
-
+    }*/
     /* Create the effect slot object. This is what "plays" an effect on sources
      * that connect to it. */
-    alGenAuxiliaryEffectSlots(1, &slot);
+    //alGenAuxiliaryEffectSlots(1, &slot);
 
     /* Tell the effect slot to use the loaded effect object. Note that the this
      * effectively copies the effect properties. You can modify or delete the
      * effect object afterward without affecting the effect slot.
      */
-    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
-    assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
+    //alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+    //assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
 
     /* Create the source to play the sound with. */
     /*source = 0;
@@ -412,9 +418,10 @@ int main(int argc, char* argv[])
     alSourcei(source, AL_BUFFER, (ALint)buffer);*/
     assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
 
-    alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
+    //alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slot, 0, AL_FILTER_NULL);
     /* Play the sound until it finishes. */
     alSourcePlay(source);
+    //alSourcei(source, AL_GAIN, 0.0f);     // 音量
     do {
         al_nssleep(10000000);
         alGetSourcei(source, AL_SOURCE_STATE, &state);
