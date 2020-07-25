@@ -13,13 +13,27 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ソース ファイル\common">
+      <UniqueIdentifier>{1b0b4fe7-d5cd-40b4-8b43-20a33ad4c56e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StereoMakeDelay.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="alhelpers.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="common.cpp">
+      <Filter>ソース ファイル\common</Filter>
     </ClCompile>
+    <ClCompile Include="common_platform.cpp">
+      <Filter>ソース ファイル\common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="common_platform.h">
+      <Filter>ソース ファイル\common</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>ソース ファイル\common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
