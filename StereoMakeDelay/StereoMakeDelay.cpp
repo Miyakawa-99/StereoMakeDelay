@@ -72,7 +72,6 @@ int FMOD_Main()
     //dopplerscale,distancefactor,rolloffscale
     result = system->set3DSettings(1.0, DISTANCEFACTOR, 1.0f);
     ERRCHECK(result);
-
     result = system->createSound(Common_MediaPath("car-engine1.wav"), FMOD_3D, 0, &sound);
     result = sound->set3DMinMaxDistance(0.5f * DISTANCEFACTOR, 5000.0f * DISTANCEFACTOR);//[0.5, 5000m]????
     ERRCHECK(result);
@@ -82,6 +81,9 @@ int FMOD_Main()
 
     FMOD_VECTOR pos = { -10.0f * DISTANCEFACTOR, 0.0f, -10.0f * DISTANCEFACTOR };
     FMOD_VECTOR vel = { 0.0f, 0.0f, 0.0f };
+    //FMOD_VECTOR forward = { 0.0f, 0.0f, 1.0f };
+    //FMOD_VECTOR up = { 0.0f, 1.0f, 0.0f };
+
 
     result = system->playSound(sound, 0, false, &channel);
     ERRCHECK(result);
@@ -245,20 +247,32 @@ int FMOD_Main()
 
         if (Common_BtnDown(BTN_LEFT))
         {
-            pan = (pan <= -0.9f) ? -1.0f : pan - 0.1f;
-
-            result = channel->setPan(pan);
-            //result = channel ->set3DAttributes;///修正
+            pos.x -= 1.0f * DISTANCEFACTOR;
+            result = channel->set3DAttributes(&pos, &vel);
             ERRCHECK(result);
         }
 
         if (Common_BtnDown(BTN_RIGHT))
         {
-            pan = (pan >= 0.9f) ? 1.0f : pan + 0.1f;
-
-            result = channel->setPan(pan);
+            pos.x += 1.0f * DISTANCEFACTOR;
+            result = channel->set3DAttributes(&pos, &vel);
             ERRCHECK(result);
         }
+
+        if (Common_BtnDown(BTN_UP))
+        {
+            pos.z += 1.0f * DISTANCEFACTOR;
+            result = channel->set3DAttributes(&pos, &vel);
+            ERRCHECK(result);
+        }
+
+        if (Common_BtnDown(BTN_DOWN))
+        {
+            pos.z -= 1.0f * DISTANCEFACTOR;
+            result = channel->set3DAttributes(&pos, &vel);
+            ERRCHECK(result);
+        }
+
 
         result = system->update();
         ERRCHECK(result);
@@ -271,7 +285,10 @@ int FMOD_Main()
         Common_Draw("");
         Common_Draw("LeftDelay is %s", LeftDelayBypass ? "inactive" : "active");
         Common_Draw("RightDelay is %s", RightDelayBypass ? "inactive" : "active");
-        Common_Draw("Pan is %0.2f", pan);
+        Common_Draw("Pan is %0.2f", pos.x);
+        Common_Draw("Up is %0.2f", pos.y);
+        Common_Draw("Forward is %0.2f", pos.z);
+
 
         Common_Sleep(50);
     } while (!Common_BtnPress(BTN_QUIT));
