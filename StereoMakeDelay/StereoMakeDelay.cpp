@@ -112,7 +112,7 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES* reverb)
     alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_ECHO);
 
     alEffectf(effect, AL_ECHO_DELAY, 0.000f);
-    alEffectf(effect, AL_ECHO_LRDELAY, 0.10f);
+    alEffectf(effect, AL_ECHO_LRDELAY, 0.001f);//0-0.441s
     alEffectf(effect, AL_ECHO_DAMPING, 0.000f);
     alEffectf(effect, AL_ECHO_FEEDBACK, 0.000f);
     alEffectf(effect, AL_ECHO_SPREAD, -1.000f);
