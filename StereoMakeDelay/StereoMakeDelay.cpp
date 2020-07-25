@@ -37,6 +37,7 @@ int FMOD_Main()
     FMOD::DSPConnection* dspLeftDelayconnection, * dspRightDelayconnection;
     FMOD_RESULT          result;
     unsigned int         version;
+    float                pan = 0.0f;
     void* extradriverdata = 0;
 
     Common_Init(&extradriverdata);
@@ -80,6 +81,8 @@ int FMOD_Main()
 
     FMOD_VECTOR pos = { -10.0f * DISTANCEFACTOR, 0.0f, -10.0f * DISTANCEFACTOR };
     FMOD_VECTOR vel = { 0.0f, 0.0f, 0.0f };
+    //FMOD_VECTOR forward = { 0.0f, 0.0f, 1.0f };
+    //FMOD_VECTOR up = { 0.0f, 1.0f, 0.0f };
 
 
     result = system->playSound(sound, 0, false, &channel);
