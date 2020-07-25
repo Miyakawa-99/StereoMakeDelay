@@ -24,6 +24,9 @@ For more speakers:
 #include "fmod.hpp"
 #include "common.h"
 
+const int   INTERFACE_UPDATETIME = 50;      // 50ms update for interface
+const float DISTANCEFACTOR = 1.0f;          // Units per meter.  I.e feet would = 3.28.  centimeters would = 100.
+
 int FMOD_Main()
 {
     FMOD::System* system;
@@ -65,16 +68,31 @@ int FMOD_Main()
     result = system->init(32, FMOD_INIT_NORMAL, extradriverdata);
     ERRCHECK(result);
 
-    result = system->createSound(Common_MediaPath("car-engine1.wav"), FMOD_LOOP_NORMAL, 0, &sound);
+    //Sets the global doppler scale, distance factorand log rolloff scale for all 3D sound in FMOD.
+    //dopplerscale,distancefactor,rolloffscale
+    result = system->set3DSettings(1.0, DISTANCEFACTOR, 1.0f);
     ERRCHECK(result);
 
+    result = system->createSound(Common_MediaPath("car-engine1.wav"), FMOD_3D, 0, &sound);
+    result = sound->set3DMinMaxDistance(0.5f * DISTANCEFACTOR, 5000.0f * DISTANCEFACTOR);//[0.5, 5000m]????
+    ERRCHECK(result);
+    result = sound->setMode(FMOD_LOOP_NORMAL);
+    ERRCHECK(result);
+
+
+    FMOD_VECTOR pos = { -10.0f * DISTANCEFACTOR, 0.0f, -10.0f * DISTANCEFACTOR };
+    FMOD_VECTOR vel = { 0.0f, 0.0f, 0.0f };
+
     result = system->playSound(sound, 0, false, &channel);
+    ERRCHECK(result);
+
+    result = channel->set3DAttributes(&pos, &vel);
     ERRCHECK(result);
 
     /*
         Create the DSP effects.
     */
-    //0-100000ms
+    //0-10ms
     //Left Delay
     result = system->createDSPByType(FMOD_DSP_TYPE_DELAY, &dspLeftDelay);
     ERRCHECK(result);
@@ -230,6 +248,7 @@ int FMOD_Main()
             pan = (pan <= -0.9f) ? -1.0f : pan - 0.1f;
 
             result = channel->setPan(pan);
+            //result = channel ->set3DAttributes;///修正
             ERRCHECK(result);
         }
 
