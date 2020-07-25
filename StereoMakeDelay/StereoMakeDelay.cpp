@@ -37,7 +37,6 @@ int FMOD_Main()
     FMOD::DSPConnection* dspLeftDelayconnection, * dspRightDelayconnection;
     FMOD_RESULT          result;
     unsigned int         version;
-    float                pan = 0.0f;
     void* extradriverdata = 0;
 
     Common_Init(&extradriverdata);
