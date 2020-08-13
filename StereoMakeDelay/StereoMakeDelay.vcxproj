@@ -160,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="common.cpp" />
     <ClCompile Include="common_platform.cpp" />
+    <ClCompile Include="fmod.cpp" />
     <ClCompile Include="StereoMakeDelay.cpp" />
   </ItemGroup>
   <ItemGroup>

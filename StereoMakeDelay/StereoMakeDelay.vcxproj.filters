@@ -27,6 +27,9 @@
     <ClCompile Include="common_platform.cpp">
       <Filter>ソース ファイル\common</Filter>
     </ClCompile>
+    <ClCompile Include="fmod.cpp">
+      <Filter>ソース ファイル\common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common_platform.h">

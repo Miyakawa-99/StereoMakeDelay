@@ -23,10 +23,11 @@ For more speakers:
 ==============================================================================*/
 #include "fmod.hpp"
 #include "common.h"
+#include "fmod_dsp.h"
 
 const int   INTERFACE_UPDATETIME = 50;      // 50ms update for interface
 const float DISTANCEFACTOR = 1.0f;          // Units per meter.  I.e feet would = 3.28.  centimeters would = 100.
-
+float count = 0;
 int FMOD_Main()
 {
     FMOD::System* system;
@@ -43,6 +44,7 @@ int FMOD_Main()
 
     /*
         Create a System object and initialize.
+
     */
     result = FMOD::System_Create(&system);
     ERRCHECK(result);
@@ -67,6 +69,40 @@ int FMOD_Main()
     result = system->init(32, FMOD_INIT_NORMAL, extradriverdata);
     ERRCHECK(result);
 
+    //20200727Plugin
+    /*unsigned int resHandle;
+    const char* resonance = "../x64/Debug/resonanceaudio.dll";
+    result = system->loadPlugin(resonance, &resHandle, 0);
+    ERRCHECK(result);
+
+    //0 = Resonance Audio Listener
+    //1 = Resonance Audio Soundfield
+    //2 = Resonance Audio Source
+    unsigned int listenerPlugin, sourcePlugin;
+    system->getNestedPlugin(resHandle, 0, &listenerPlugin);
+    system->getNestedPlugin(resHandle, 2, &sourcePlugin);
+
+    FMOD::DSP* listenerDsp;
+    system->createDSPByPlugin(listenerPlugin, &listenerDsp);
+    ERRCHECK(result);
+    FMOD::DSP* sourceDsp;
+    system->createDSPByPlugin(sourcePlugin, &sourceDsp);
+    ERRCHECK(result);
+    sourceDsp->setParameterFloat(0.5f * DISTANCEFACTOR, 5000.0f * DISTANCEFACTOR);
+
+    //This a channel group routed from the Master group
+    //I want to spatialize all sounds which are played in this group
+    FMOD::ChannelGroup* worldGroup = nullptr;
+    system->createChannelGroup("World", &worldGroup);
+    FMOD::ChannelGroup* masterGroup = nullptr;
+    system->getMasterChannelGroup(&masterGroup);
+    masterGroup->addGroup(worldGroup);
+
+    //Adding Resonance Audio dsps to the group
+     //channel->addDsp(FMOD_CHANNELCONTROL_DSP_TAIL, sourceDsp);
+    //worldGroup->addDsp(FMOD_CHANNELCONTROL_DSP_TAIL, listenerDsp);*/
+    ///////
+ 
     //Sets the global doppler scale, distance factorand log rolloff scale for all 3D sound in FMOD.
     //dopplerscale,distancefactor,rolloffscale
     result = system->set3DSettings(1.0, DISTANCEFACTOR, 1.0f);
@@ -97,13 +133,13 @@ int FMOD_Main()
     //Left Delay
     result = system->createDSPByType(FMOD_DSP_TYPE_DELAY, &dspLeftDelay);
     ERRCHECK(result);
-    result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, 1.0f);
+    result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, 0.0f);
     ERRCHECK(result);
 
     //RightDelay
     result = system->createDSPByType(FMOD_DSP_TYPE_DELAY, &dspRightDelay);
     ERRCHECK(result);
-    result = dspRightDelay->setParameterFloat(FMOD_DSP_DELAY_CH1, 1.0f);
+    result = dspRightDelay->setParameterFloat(FMOD_DSP_DELAY_CH1, 0.0f);
     ERRCHECK(result);
 
 
@@ -230,16 +266,26 @@ int FMOD_Main()
         if (Common_BtnPress(BTN_ACTION1))
         {
             LeftDelayBypass = !LeftDelayBypass;
+            count=count + 0.1;
+            result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, count);
+            ERRCHECK(result);
+            /*result = dsphead->addInput(dspLeftDelay, &dspLeftDelayconnection);      /* x = dsplowpassconnection */
+            /*ERRCHECK(result);
+            result = dspLeftDelay->addInput(dspchannelmixer);     /* Ignore connection - we dont care about it. */
+            //ERRCHECK(result);
 
-            result = dspLeftDelay->setBypass(LeftDelayBypass);
+            result = dspLeftDelay->setBypass(false);
             ERRCHECK(result);
         }
 
         if (Common_BtnPress(BTN_ACTION2))
         {
             RightDelayBypass = !RightDelayBypass;
+            count = count - 0.1;
+            result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, count);
+            ERRCHECK(result);
 
-            result = dspRightDelay->setBypass(RightDelayBypass);
+            result = dspRightDelay->setBypass(false);
             ERRCHECK(result);
         }
 
