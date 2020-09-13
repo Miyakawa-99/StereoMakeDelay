@@ -27,7 +27,8 @@ For more speakers:
 
 const int   INTERFACE_UPDATETIME = 50;      // 50ms update for interface
 const float DISTANCEFACTOR = 1.0f;          // Units per meter.  I.e feet would = 3.28.  centimeters would = 100.
-float count = 0;
+float Leftcount = 0;
+float Rightcount = 0;
 int FMOD_Main()
 {
     FMOD::System* system;
@@ -265,9 +266,9 @@ int FMOD_Main()
 
         if (Common_BtnPress(BTN_ACTION1))
         {
-            LeftDelayBypass = !LeftDelayBypass;
-            count=count + 0.1;
-            result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, count);
+            //LeftDelayBypass = !LeftDelayBypass;
+            Leftcount=Leftcount + 0.1;
+            result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, Leftcount);
             ERRCHECK(result);
             /*result = dsphead->addInput(dspLeftDelay, &dspLeftDelayconnection);      /* x = dsplowpassconnection */
             /*ERRCHECK(result);
@@ -281,8 +282,8 @@ int FMOD_Main()
         if (Common_BtnPress(BTN_ACTION2))
         {
             RightDelayBypass = !RightDelayBypass;
-            count = count - 0.1;
-            result = dspLeftDelay->setParameterFloat(FMOD_DSP_DELAY_CH0, count);
+            Rightcount = Rightcount + 0.1;
+            result = dspRightDelay->setParameterFloat(FMOD_DSP_DELAY_CH1, Rightcount);
             ERRCHECK(result);
 
             result = dspRightDelay->setBypass(false);
